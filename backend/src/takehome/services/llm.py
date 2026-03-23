@@ -25,20 +25,43 @@ if USE_SSL_WORKAROUND:
 agent = Agent(
     "anthropic:claude-haiku-4-5-20251001",
     system_prompt=(
-        "You are a helpful legal document assistant for commercial real estate lawyers. "
-        "You help lawyers review and understand documents during due diligence.\n\n"
-        "IMPORTANT INSTRUCTIONS:\n"
-        "- Answer questions based on the document content provided.\n"
-        "- When referencing specific parts of the document, cite the relevant section or clause.\n"
-        "- If the answer is not in the document, say so clearly. Do not fabricate information.\n"
-        "- Be concise and precise. Lawyers value accuracy over verbosity.\n"
-        "- When you reference specific content, mention the section, clause, or page."
+        "You are a specialized legal document assistant for commercial real estate transactions. "
+        "You help real estate lawyers analyze deeds, leases, title reports, surveys, and purchase agreements.\n\n"
+        "CRITICAL INSTRUCTIONS:\n"
+        "- ONLY answer based on the document content provided. Do not use general knowledge.\n"
+        "- If the answer is not in the documents, respond: 'I cannot find this information in the provided documents.'\n"
+        "- ALWAYS cite specific sections, clauses, pages, or document names when making claims.\n"
+        "- NEVER fabricate or infer information that is not explicitly in the documents.\n"
+        "- Be concise and precise. Real estate lawyers value accuracy over verbosity.\n"
+        "- Understand real estate terminology: metes and bounds, easements, encumbrances, title exceptions, CC&Rs.\n"
+        "- When uncertain, admit it. Say 'I am not certain' rather than guessing."
+    ),
+)
+
+# Agent for verification (checks if claims are supported by sources)
+verification_agent = Agent(
+    "anthropic:claude-haiku-4-5-20251001",
+    system_prompt=(
+        "You are a verification assistant. Your job is to check if claims are supported by source documents.\n\n"
+        "Given an answer and source documents, you must:\n"
+        "1. Identify each factual claim in the answer\n"
+        "2. Check if each claim is directly supported by the sources\n"
+        "3. Provide a confidence score (0-100) based on:\n"
+        "   - How many claims are supported (more = higher confidence)\n"
+        "   - How explicit the support is (exact quotes = higher confidence)\n"
+        "   - Whether sources contradict claims (contradictions = very low confidence)\n\n"
+        "Output format:\n"
+        "CONFIDENCE: <number 0-100>\n"
+        "VERIFIED: <list of verified claims>\n"
+        "UNVERIFIED: <list of unverified or uncertain claims>"
     ),
 )
 
 # Apply SSL workaround only for local development
 if USE_SSL_WORKAROUND and hasattr(agent, '_model') and hasattr(agent._model, 'client'):
     agent._model.client = anthropic_client
+    if hasattr(verification_agent, '_model') and hasattr(verification_agent._model, 'client'):
+        verification_agent._model.client = anthropic_client
 
 
 async def generate_title(user_message: str) -> str:
@@ -115,3 +138,170 @@ def count_sources_cited(response: str) -> int:
     for pattern in patterns:
         count += len(re.findall(pattern, response, re.IGNORECASE))
     return count
+
+
+def extract_citations(answer: str, document_text: str | None, document_name_to_id: dict[str, str] | None = None) -> list[dict]:
+    """Extract citations from AI answer with page numbers and text snippets.
+
+    Args:
+        answer: The AI response text
+        document_text: Combined text from all documents
+        document_name_to_id: Mapping of document filenames to their IDs
+
+    Returns:
+        list: List of citation dictionaries with page_number, section, and extracted_text
+    """
+    if not document_text:
+        return []
+
+    citations = []
+
+    # Pattern to match citations like "Section 4", "Page 3", "Clause 2.1"
+    citation_patterns = [
+        (r"section\s+(\d+(?:\.\d+)?)", "section"),
+        (r"page\s+(\d+)", "page"),
+        (r"clause\s+(\d+(?:\.\d+)?)", "clause"),
+        (r"paragraph\s+(\d+(?:\.\d+)?)", "paragraph"),
+    ]
+
+    # Try to determine which document each citation belongs to
+    # Split by document markers if multi-doc
+    doc_sections = []
+    if "=== Document:" in document_text:
+        parts = document_text.split("=== Document:")
+        for part in parts[1:]:
+            lines = part.split("\n", 1)
+            doc_name = lines[0].strip().replace("===", "").strip()
+            doc_content = lines[1] if len(lines) > 1 else ""
+            doc_sections.append((doc_name, doc_content))
+    else:
+        doc_sections = [("Document", document_text)]
+
+    for pattern, cite_type in citation_patterns:
+        matches = re.finditer(pattern, answer, re.IGNORECASE)
+        for match in matches:
+            reference = match.group(1)
+
+            # Extract snippet from document around this reference
+            search_pattern = rf"(?:section|clause|paragraph)\s+{re.escape(reference)}"
+
+            extracted_text = ""
+            page_number = 1
+            source_doc_name = doc_sections[0][0] if doc_sections else "Document"
+
+            # Find which document this citation belongs to
+            for doc_name, doc_content in doc_sections:
+                doc_match = re.search(search_pattern, doc_content, re.IGNORECASE)
+                if doc_match:
+                    source_doc_name = doc_name
+                    # Get 200 characters around the match
+                    start = max(0, doc_match.start() - 50)
+                    end = min(len(doc_content), doc_match.end() + 150)
+                    extracted_text = doc_content[start:end].strip()
+                    extracted_text = " ".join(extracted_text.split())
+
+                    # Extract page number from document structure
+                    if "--- Page" in doc_content:
+                        pages = doc_content.split("--- Page ")
+                        for idx, page_content in enumerate(pages[1:], 1):
+                            if search_pattern in page_content:
+                                page_number = idx
+                                break
+                    break
+
+            # Map document name to ID if available
+            doc_id = None
+            if document_name_to_id and source_doc_name in document_name_to_id:
+                doc_id = document_name_to_id[source_doc_name]
+
+            citation = {
+                "type": cite_type,
+                "reference": reference,
+                "page_number": page_number,
+                "document_name": source_doc_name,
+                "document_id": doc_id,
+                "extracted_text": extracted_text[:200] if extracted_text else f"{cite_type.capitalize()} {reference}",
+                "confidence": 90
+            }
+            citations.append(citation)
+
+    # Deduplicate citations by reference
+    seen = set()
+    unique_citations = []
+    for cit in citations:
+        key = f"{cit['type']}_{cit['reference']}_{cit['page_number']}"
+        if key not in seen:
+            seen.add(key)
+            unique_citations.append(cit)
+
+    return unique_citations
+
+
+async def verify_response(answer: str, document_text: str | None) -> tuple[int, str]:
+    """Verify the AI answer against source documents and return confidence score.
+
+    Returns:
+        tuple: (confidence_score 0-100, verification_details)
+    """
+    if not document_text:
+        # No document to verify against
+        return 50, "No document provided for verification"
+
+    # Check for explicit "I don't know" responses
+    uncertainty_phrases = [
+        "cannot find",
+        "not in the document",
+        "not mentioned",
+        "i don't know",
+        "i am not certain",
+        "unable to determine"
+    ]
+
+    answer_lower = answer.lower()
+    if any(phrase in answer_lower for phrase in uncertainty_phrases):
+        # AI explicitly admitted uncertainty - this is GOOD, high confidence in honesty
+        return 95, "AI appropriately admitted uncertainty"
+
+    # Count citations in the answer
+    citation_count = count_sources_cited(answer)
+
+    # Quick heuristic scoring (before full LLM verification)
+    if citation_count == 0:
+        # No citations at all - low confidence
+        base_confidence = 40
+    elif citation_count >= 3:
+        # Multiple citations - high confidence
+        base_confidence = 85
+    else:
+        # Some citations - medium confidence
+        base_confidence = 70
+
+    # Run verification with LLM (pass 2)
+    verification_prompt = (
+        f"Answer to verify:\n{answer}\n\n"
+        f"Source document:\n{document_text[:2000]}\n\n"  # Truncate for speed
+        "Verify if the claims in the answer are supported by the source."
+    )
+
+    try:
+        result = await verification_agent.run(verification_prompt)
+        verification_text = str(result.output)
+
+        # Extract confidence score from verification
+        confidence_match = re.search(r"CONFIDENCE:\s*(\d+)", verification_text, re.IGNORECASE)
+        if confidence_match:
+            llm_confidence = int(confidence_match.group(1))
+            # Average the heuristic and LLM confidence
+            final_confidence = (base_confidence + llm_confidence) // 2
+        else:
+            final_confidence = base_confidence
+
+        # Cap confidence based on citation count
+        if citation_count == 0:
+            final_confidence = min(final_confidence, 50)
+
+        return final_confidence, verification_text
+
+    except Exception as e:
+        # Verification failed - return base confidence
+        return base_confidence, f"Verification failed: {str(e)}"

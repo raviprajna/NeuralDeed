@@ -14,8 +14,8 @@ from starlette.responses import StreamingResponse
 from takehome.db.models import Message
 from takehome.db.session import get_session
 from takehome.services.conversation import get_conversation, update_conversation
-from takehome.services.document import get_document_for_conversation
-from takehome.services.llm import chat_with_document, count_sources_cited, generate_title
+from takehome.services.document import get_document_for_conversation, get_documents_for_conversation
+from takehome.services.llm import chat_with_document, count_sources_cited, generate_title, verify_response, extract_citations
 
 logger = structlog.get_logger()
 
@@ -33,6 +33,8 @@ class MessageOut(BaseModel):
     role: str
     content: str
     sources_cited: int
+    confidence: int | None = None
+    citations: list[dict] | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -76,6 +78,8 @@ async def list_messages(
             role=m.role,
             content=m.content,
             sources_cited=m.sources_cited,
+            confidence=m.confidence,
+            citations=m.citations,
             created_at=m.created_at,
         )
         for m in messages
@@ -106,9 +110,20 @@ async def send_message(
 
     logger.info("User message saved", conversation_id=conversation_id, message_id=user_message.id)
 
-    # Load document text for the conversation
-    document = await get_document_for_conversation(session, conversation_id)
-    document_text: str | None = document.extracted_text if document else None
+    # Load all documents for the conversation (multi-document support)
+    documents = await get_documents_for_conversation(session, conversation_id)
+
+    # Combine text from all documents
+    if documents:
+        document_texts = []
+        for doc in documents:
+            if doc.extracted_text:
+                document_texts.append(
+                    f"=== Document: {doc.filename} ===\n{doc.extracted_text}\n"
+                )
+        document_text = "\n\n".join(document_texts) if document_texts else None
+    else:
+        document_text = None
 
     # Load conversation history (exclude the message we just saved, it will be the user_message param)
     stmt = (
@@ -155,6 +170,23 @@ async def send_message(
         # Count sources cited in the full response
         sources = count_sources_cited(full_response)
 
+        # Build document name to ID mapping for citation extraction
+        doc_name_to_id = {doc.filename: doc.id for doc in documents} if documents else None
+        citations = extract_citations(full_response, document_text, doc_name_to_id)
+
+        # Verify the response and calculate confidence score
+        confidence_score, verification_details = await verify_response(
+            full_response, document_text
+        )
+
+        logger.info(
+            "Response verified",
+            conversation_id=conversation_id,
+            confidence=confidence_score,
+            sources=sources,
+            citations_found=len(citations),
+        )
+
         # Save the assistant message to the database.
         # We need a fresh session since the outer one may have been closed.
         from takehome.db.session import async_session as session_factory
@@ -165,6 +197,8 @@ async def send_message(
                 role="assistant",
                 content=full_response,
                 sources_cited=sources,
+                confidence=confidence_score,
+                citations=citations if citations else None,
             )
             save_session.add(assistant_message)
             await save_session.commit()
@@ -196,6 +230,8 @@ async def send_message(
                         "role": assistant_message.role,
                         "content": assistant_message.content,
                         "sources_cited": assistant_message.sources_cited,
+                        "confidence": assistant_message.confidence,
+                        "citations": assistant_message.citations,
                         "created_at": assistant_message.created_at.isoformat(),
                     },
                 }
@@ -207,6 +243,7 @@ async def send_message(
                 {
                     "type": "done",
                     "sources_cited": sources,
+                    "confidence": confidence_score,
                     "message_id": assistant_message.id,
                 }
             )

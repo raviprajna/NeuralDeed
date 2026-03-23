@@ -1,0 +1,54 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: Chats
+      - button "New chat" [active] [ref=e7] [cursor=pointer]:
+        - img [ref=e8]
+    - generic [ref=e13]:
+      - button "New Conversation just now" [ref=e15] [cursor=pointer]:
+        - generic [ref=e16]:
+          - paragraph [ref=e17]: New Conversation
+          - paragraph [ref=e18]: just now
+      - button "New Conversation 7m ago" [ref=e20] [cursor=pointer]:
+        - generic [ref=e21]:
+          - paragraph [ref=e22]: New Conversation
+          - paragraph [ref=e23]: 7m ago
+      - button "New Conversation 7m ago" [ref=e25] [cursor=pointer]:
+        - generic [ref=e26]:
+          - paragraph [ref=e27]: New Conversation
+          - paragraph [ref=e28]: 7m ago
+      - button "New Conversation 7m ago" [ref=e30] [cursor=pointer]:
+        - generic [ref=e31]:
+          - paragraph [ref=e32]: New Conversation
+          - paragraph [ref=e33]: 7m ago
+      - button "New Conversation 8m ago" [ref=e35] [cursor=pointer]:
+        - generic [ref=e36]:
+          - paragraph [ref=e37]: New Conversation
+          - paragraph [ref=e38]: 8m ago
+  - generic [ref=e39]:
+    - generic [ref=e41]:
+      - paragraph [ref=e42]: Link or upload documents to get started
+      - paragraph [ref=e43]: Use the document panel on the right to add documents
+    - generic [ref=e45]:
+      - button [ref=e47] [cursor=pointer]:
+        - img [ref=e48]
+      - textbox "Link or upload documents to start asking questions" [disabled] [ref=e50]
+      - button [disabled]:
+        - img
+  - generic [ref=e52]:
+    - img [ref=e55]
+    - heading "Link or Upload Documents" [level=3] [ref=e58]
+    - paragraph [ref=e59]: Choose documents from your library or upload new ones to get started
+    - generic [ref=e60]:
+      - button "Link from Library Reuse existing docs" [ref=e61] [cursor=pointer]:
+        - img [ref=e62]
+        - generic [ref=e65]: Link from Library
+        - generic [ref=e66]: Reuse existing docs
+      - button "Upload New Add to library" [ref=e67] [cursor=pointer]:
+        - img [ref=e68]
+        - generic [ref=e71]: Upload New
+        - generic [ref=e72]: Add to library
+```

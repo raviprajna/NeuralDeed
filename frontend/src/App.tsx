@@ -1,13 +1,19 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { ChatSidebar } from "./components/ChatSidebar";
 import { ChatWindow } from "./components/ChatWindow";
-import { DocumentViewer } from "./components/DocumentViewer";
+import { DocumentLibraryModal } from "./components/DocumentLibraryModal";
+import { EnhancedMultiDocViewer } from "./components/EnhancedMultiDocViewer";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { useConversations } from "./hooks/use-conversations";
 import { useDocument } from "./hooks/use-document";
 import { useMessages } from "./hooks/use-messages";
+import * as api from "./lib/api";
 
 export default function App() {
+	const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
+	const [targetPage, setTargetPage] = useState<number | undefined>(undefined);
+	const [highlightText, setHighlightText] = useState<string | undefined>(undefined);
+
 	const {
 		conversations,
 		selectedId,
@@ -29,6 +35,7 @@ export default function App() {
 
 	const {
 		document,
+		documents,
 		upload,
 		refresh: refreshDocument,
 	} = useDocument(selectedId);
@@ -56,9 +63,71 @@ export default function App() {
 		await create();
 	}, [create]);
 
+	const handleDocumentUploaded = useCallback(() => {
+		refreshDocument();
+		refreshConversations();
+	}, [refreshDocument, refreshConversations]);
+
+	const [showLibrary, setShowLibrary] = useState(false);
+
+	const handleCitationClick = useCallback(
+		(page: number, documentId?: string, extractedText?: string) => {
+			// Find the document - either by documentId or use first document
+			const targetDoc = documentId
+				? documents.find(d => d.id === documentId)
+				: documents[0];
+
+			if (!targetDoc) {
+				console.error('Document not found for citation');
+				return;
+			}
+
+			// Switch to the document
+			setActiveDocumentId(targetDoc.id);
+
+			// Wait a moment for document to switch, then navigate
+			setTimeout(() => {
+				setTargetPage(page);
+				if (extractedText) {
+					console.log('Citation highlight text:', extractedText);
+					setHighlightText(extractedText);
+				}
+			}, 100);
+
+			// Reset after highlighting (longer for citations)
+			setTimeout(() => {
+				setTargetPage(undefined);
+				setHighlightText(undefined);
+			}, 5000);
+		},
+		[documents],
+	);
+
+	const handleOpenLibrary = useCallback(() => {
+		setShowLibrary(true);
+	}, []);
+
+	const handleLibraryClose = useCallback(() => {
+		setShowLibrary(false);
+		handleDocumentUploaded();
+	}, [handleDocumentUploaded]);
+
+	const handleDocumentRemove = useCallback(
+		async (documentId: string) => {
+			try {
+				await api.deleteDocument(documentId);
+				refreshDocument();
+				refreshConversations();
+			} catch (error) {
+				console.error("Failed to remove document:", error);
+			}
+		},
+		[refreshDocument, refreshConversations],
+	);
+
 	return (
 		<TooltipProvider delayDuration={200}>
-			<div className="flex h-screen bg-neutral-50">
+			<div className="flex h-screen bg-neutral-50 bg-mesh-light">
 				<ChatSidebar
 					conversations={conversations}
 					selectedId={selectedId}
@@ -66,6 +135,7 @@ export default function App() {
 					onSelect={select}
 					onCreate={handleCreate}
 					onDelete={remove}
+					onOpenLibrary={handleOpenLibrary}
 				/>
 
 				<ChatWindow
@@ -74,13 +144,35 @@ export default function App() {
 					error={messagesError}
 					streaming={streaming}
 					streamingContent={streamingContent}
-					hasDocument={!!document}
+					hasDocument={documents.length > 0}
+					documentCount={documents.length}
 					conversationId={selectedId}
 					onSend={handleSend}
 					onUpload={handleUpload}
+					onCitationClick={handleCitationClick}
+					onOpenLibrary={handleOpenLibrary}
 				/>
 
-				<DocumentViewer document={document} />
+				<EnhancedMultiDocViewer
+					documents={documents}
+					activeDocumentId={activeDocumentId || documents[0]?.id}
+					targetPage={targetPage}
+					highlightText={highlightText}
+					onDocumentChange={setActiveDocumentId}
+					onDocumentUploaded={handleDocumentUploaded}
+					onDocumentRemove={handleDocumentRemove}
+					conversationId={selectedId || undefined}
+				/>
+
+				{/* Global Document Library Modal */}
+				{showLibrary && (
+					<DocumentLibraryModal
+						isOpen={showLibrary}
+						onClose={handleLibraryClose}
+						conversationId={selectedId || undefined}
+						onDocumentLinked={handleDocumentUploaded}
+					/>
+				)}
 			</div>
 		</TooltipProvider>
 	);

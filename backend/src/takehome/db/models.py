@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Integer, JSON, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -43,6 +43,8 @@ class Message(Base):
     role: Mapped[str] = mapped_column(String)  # "user", "assistant", "system"
     content: Mapped[str] = mapped_column(Text)
     sources_cited: Mapped[int] = mapped_column(Integer, default=0)
+    confidence: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 0-100 confidence score
+    citations: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # List of citation objects
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     conversation: Mapped[Conversation] = relationship(back_populates="messages")
@@ -54,13 +56,16 @@ class Document(Base):
     id: Mapped[str] = mapped_column(
         String, primary_key=True, default=lambda: uuid.uuid4().hex[:16]
     )
-    conversation_id: Mapped[str] = mapped_column(
-        ForeignKey("conversations.id", ondelete="CASCADE")
+    conversation_id: Mapped[str | None] = mapped_column(
+        ForeignKey("conversations.id", ondelete="CASCADE"), nullable=True
     )
     filename: Mapped[str] = mapped_column(String)
     file_path: Mapped[str] = mapped_column(String)
     extracted_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     page_count: Mapped[int] = mapped_column(Integer, default=0)
+    file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    file_hash: Mapped[str | None] = mapped_column(String, nullable=True)  # For deduplication
+    is_library: Mapped[bool] = mapped_column(Integer, default=0)  # True if in global library
     uploaded_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
-    conversation: Mapped[Conversation] = relationship(back_populates="documents")
+    conversation: Mapped[Conversation | None] = relationship(back_populates="documents")

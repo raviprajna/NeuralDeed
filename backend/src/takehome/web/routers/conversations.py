@@ -40,6 +40,7 @@ class ConversationDetail(BaseModel):
     updated_at: datetime
     has_document: bool
     document: DocumentInfo | None = None
+    documents: list[DocumentInfo] = []  # Multi-document support
 
     model_config = {"from_attributes": True}
 
@@ -111,7 +112,10 @@ async def get_conversation_endpoint(
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     doc_info: DocumentInfo | None = None
+    all_docs: list[DocumentInfo] = []
+
     if conversation.documents:
+        # First document for backwards compatibility
         doc = conversation.documents[0]
         doc_info = DocumentInfo(
             id=doc.id,
@@ -120,6 +124,17 @@ async def get_conversation_endpoint(
             uploaded_at=doc.uploaded_at,
         )
 
+        # All documents for multi-document support
+        all_docs = [
+            DocumentInfo(
+                id=d.id,
+                filename=d.filename,
+                page_count=d.page_count,
+                uploaded_at=d.uploaded_at,
+            )
+            for d in conversation.documents
+        ]
+
     return ConversationDetail(
         id=conversation.id,
         title=conversation.title,
@@ -127,6 +142,7 @@ async def get_conversation_endpoint(
         updated_at=conversation.updated_at,
         has_document=doc_info is not None,
         document=doc_info,
+        documents=all_docs,
     )
 
 
@@ -142,7 +158,10 @@ async def update_conversation_endpoint(
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     doc_info: DocumentInfo | None = None
+    all_docs: list[DocumentInfo] = []
+
     if conversation.documents:
+        # First document for backwards compatibility
         doc = conversation.documents[0]
         doc_info = DocumentInfo(
             id=doc.id,
@@ -151,6 +170,17 @@ async def update_conversation_endpoint(
             uploaded_at=doc.uploaded_at,
         )
 
+        # All documents for multi-document support
+        all_docs = [
+            DocumentInfo(
+                id=d.id,
+                filename=d.filename,
+                page_count=d.page_count,
+                uploaded_at=d.uploaded_at,
+            )
+            for d in conversation.documents
+        ]
+
     return ConversationDetail(
         id=conversation.id,
         title=conversation.title,
@@ -158,6 +188,7 @@ async def update_conversation_endpoint(
         updated_at=conversation.updated_at,
         has_document=doc_info is not None,
         document=doc_info,
+        documents=all_docs,
     )
 
 

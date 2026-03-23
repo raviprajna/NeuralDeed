@@ -85,3 +85,73 @@ export async function uploadDocument(
 export function getDocumentUrl(documentId: string): string {
 	return `${BASE}/documents/${documentId}/content`;
 }
+
+export async function fetchLibraryDocuments(): Promise<Document[]> {
+	const res = await fetch(`${BASE}/library/documents`);
+	return handleResponse<Document[]>(res);
+}
+
+export async function fetchConversationDocuments(
+	conversationId: string,
+): Promise<Document[]> {
+	const res = await fetch(`${BASE}/conversations/${conversationId}/documents`);
+	return handleResponse<Document[]>(res);
+}
+
+export async function deleteDocument(documentId: string): Promise<void> {
+	const res = await fetch(`${BASE}/documents/${documentId}`, {
+		method: "DELETE",
+	});
+	if (!res.ok) {
+		const text = await res.text().catch(() => "Unknown error");
+		throw new Error(`API error ${res.status}: ${text}`);
+	}
+}
+
+export async function linkDocumentToConversation(
+	conversationId: string,
+	documentId: string,
+): Promise<Document> {
+	const res = await fetch(
+		`${BASE}/conversations/${conversationId}/link-document/${documentId}`,
+		{
+			method: "POST",
+		},
+	);
+	return handleResponse<Document>(res);
+}
+
+export async function addDocumentToLibrary(documentId: string): Promise<Document> {
+	const res = await fetch(`${BASE}/documents/${documentId}/add-to-library`, {
+		method: "POST",
+	});
+	return handleResponse<Document>(res);
+}
+
+export async function uploadToLibrary(file: File): Promise<Document> {
+	const formData = new FormData();
+	formData.append("file", file);
+	const res = await fetch(`${BASE}/library/documents`, {
+		method: "POST",
+		body: formData,
+	});
+	return handleResponse<Document>(res);
+}
+
+export interface SearchResult {
+	document_id: string;
+	document_name: string;
+	page_number: number;
+	match_text: string;
+	position: number;
+}
+
+export async function searchDocuments(
+	conversationId: string,
+	query: string,
+): Promise<SearchResult[]> {
+	const res = await fetch(
+		`${BASE}/conversations/${conversationId}/search?q=${encodeURIComponent(query)}`,
+	);
+	return handleResponse<SearchResult[]>(res);
+}

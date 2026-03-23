@@ -4,18 +4,21 @@ import type { Document } from "../types";
 
 export function useDocument(conversationId: string | null) {
 	const [document, setDocument] = useState<Document | null>(null);
+	const [documents, setDocuments] = useState<Document[]>([]);
 	const [uploading, setUploading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	const refresh = useCallback(async () => {
 		if (!conversationId) {
 			setDocument(null);
+			setDocuments([]);
 			return;
 		}
 		try {
 			setError(null);
 			const detail = await api.fetchConversation(conversationId);
 			setDocument(detail.document ?? null);
+			setDocuments(detail.documents ?? []);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to load document");
 		}
@@ -32,7 +35,8 @@ export function useDocument(conversationId: string | null) {
 				setUploading(true);
 				setError(null);
 				const doc = await api.uploadDocument(conversationId, file);
-				setDocument(doc);
+				// Refresh to get updated documents list
+				await refresh();
 				return doc;
 			} catch (err) {
 				setError(
@@ -43,11 +47,12 @@ export function useDocument(conversationId: string | null) {
 				setUploading(false);
 			}
 		},
-		[conversationId],
+		[conversationId, refresh],
 	);
 
 	return {
 		document,
+		documents,
 		uploading,
 		error,
 		upload,
