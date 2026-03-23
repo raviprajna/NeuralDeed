@@ -23,6 +23,60 @@ logger = structlog.get_logger()
 router = APIRouter(tags=["documents"])
 
 
+@router.get("/api/storage/health")
+async def storage_health_check():
+    """Check storage configuration and volume status."""
+    import os
+    from takehome.config import settings
+
+    upload_dir = settings.upload_dir
+    cwd = os.getcwd()
+
+    # List all subdirectories and files
+    contents = []
+    if os.path.exists(upload_dir):
+        for item in os.listdir(upload_dir):
+            item_path = os.path.join(upload_dir, item)
+            if os.path.isdir(item_path):
+                sub_items = os.listdir(item_path)
+                contents.append(f"{item}/ ({len(sub_items)} files)")
+            else:
+                contents.append(item)
+
+    return {
+        "cwd": cwd,
+        "upload_dir": upload_dir,
+        "upload_dir_exists": os.path.exists(upload_dir),
+        "upload_dir_writable": os.access(upload_dir, os.W_OK) if os.path.exists(upload_dir) else False,
+        "upload_dir_contents": contents,
+        "use_r2": os.environ.get("USE_R2") == "true",
+    }
+
+
+@router.get("/api/documents/{document_id}/debug")
+async def debug_document(
+    document_id: str,
+    session: AsyncSession = Depends(get_session),
+):
+    """Debug endpoint to check document file status."""
+    import os
+
+    document = await get_document(session, document_id)
+    if document is None:
+        return {"error": "Document not found in database", "document_id": document_id}
+
+    file_exists = os.path.exists(document.file_path) if not document.file_path.startswith("r2://") else None
+
+    return {
+        "document_id": document.id,
+        "filename": document.filename,
+        "file_path": document.file_path,
+        "file_exists": file_exists,
+        "conversation_id": document.conversation_id,
+        "uploaded_at": document.uploaded_at.isoformat(),
+    }
+
+
 # --------------------------------------------------------------------------- #
 # Schemas
 # --------------------------------------------------------------------------- #
@@ -103,14 +157,22 @@ async def serve_document_file(
     """Serve the raw PDF file for download/viewing."""
     from starlette.responses import Response
     from takehome.services.storage import read_file
+    import os
 
     document = await get_document(session, document_id)
     if document is None:
+        logger.error("Document not found in database", document_id=document_id)
         raise HTTPException(status_code=404, detail="Document not found")
+
+    logger.info("Serving document",
+                document_id=document_id,
+                file_path=document.file_path,
+                file_exists=os.path.exists(document.file_path) if not document.file_path.startswith("r2://") else "N/A")
 
     # Read from storage (handles both local and R2)
     try:
         file_content = await read_file(document.file_path)
+        logger.info("Successfully read file", document_id=document_id, size=len(file_content))
         return Response(
             content=file_content,
             media_type="application/pdf",
@@ -118,10 +180,11 @@ async def serve_document_file(
                 "Content-Disposition": f'inline; filename="{document.filename}"'
             },
         )
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="File not found in storage")
+    except FileNotFoundError as e:
+        logger.error("File not found in storage", document_id=document_id, path=document.file_path, error=str(e))
+        raise HTTPException(status_code=404, detail=f"File not found in storage: {document.file_path}")
     except Exception as e:
-        logger.error("Failed to serve document", error=str(e))
+        logger.error("Failed to serve document", document_id=document_id, error=str(e))
         raise HTTPException(status_code=500, detail="Failed to retrieve document")
 
 

@@ -5,6 +5,7 @@ import {
 	Link2,
 	Loader2,
 	Search,
+	Trash2,
 	Upload,
 	X,
 } from "lucide-react";
@@ -332,15 +333,32 @@ export function DocumentLibraryModal({
 													type="button"
 													onClick={() => toggleSelection(doc.id)}
 													className={cn(
-														"relative flex items-start gap-3 rounded-xl border-2 p-3 text-left transition-all",
+														"group relative flex items-start gap-3 rounded-xl border-2 p-3 text-left transition-all",
 														isSelected
 															? "border-brand-500 bg-brand-50 shadow-soft"
 															: "border-neutral-200 bg-white hover:border-brand-300 hover:shadow-soft",
 													)}
 												>
+													{/* Delete button */}
+													<button
+														type="button"
+														onClick={(e) => {
+															e.stopPropagation();
+															if (confirm(`Delete ${doc.filename}? This will remove it from your library.`)) {
+																api.deleteDocument(doc.id)
+																	.then(() => loadLibrary())
+																	.catch(err => console.error('Delete failed:', err));
+															}
+														}}
+														className="absolute top-2 right-2 z-10 rounded-full p-1.5 bg-white border border-neutral-200 text-neutral-400 hover:text-red-500 hover:border-red-300 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+														title="Delete from library"
+													>
+														<Trash2 className="h-3.5 w-3.5" />
+													</button>
+
 													{/* Linked indicator */}
 													{isLinked && (
-														<div className="absolute top-2 right-2">
+														<div className="absolute top-2 right-10">
 															<div className="flex items-center gap-1 rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-medium text-brand-700">
 																<Link2 className="h-2.5 w-2.5" />
 																Linked

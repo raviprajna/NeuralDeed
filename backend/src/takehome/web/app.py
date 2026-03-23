@@ -15,6 +15,17 @@ logger = structlog.get_logger()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    # Ensure uploads directory exists
+    import os
+    from takehome.config import settings
+
+    upload_dir = settings.upload_dir
+    os.makedirs(upload_dir, exist_ok=True)
+    logger.info("Upload directory ready",
+                path=upload_dir,
+                exists=os.path.exists(upload_dir),
+                writable=os.access(upload_dir, os.W_OK))
+
     logger.info("Running database migrations...")
     alembic_cfg = Config("alembic.ini")
     # Run in a thread because alembic's env.py uses asyncio.run(),
