@@ -4,21 +4,23 @@ import os
 import re
 from collections.abc import AsyncIterator
 
-import httpx
-from anthropic import AsyncAnthropic
 from pydantic_ai import Agent
-from pydantic_ai.models.anthropic import AnthropicModel
 
 from takehome.config import settings  # noqa: F401 — triggers ANTHROPIC_API_KEY export
 
-# Workaround for SSL certificate issues in Docker
-# In production (Railway/cloud), SSL works fine. For local dev, we disable SSL verification.
-# TODO: Remove this once deployed to production
-http_client = httpx.AsyncClient(verify=False)
-anthropic_client = AsyncAnthropic(
-    api_key=os.environ.get("ANTHROPIC_API_KEY"),
-    http_client=http_client
-)
+# Check if running in local dev (Docker SSL issues) vs production
+USE_SSL_WORKAROUND = os.environ.get("RAILWAY_ENVIRONMENT") is None
+
+if USE_SSL_WORKAROUND:
+    # Local development: disable SSL verification for Docker container issues
+    import httpx
+    from anthropic import AsyncAnthropic
+
+    http_client = httpx.AsyncClient(verify=False)
+    anthropic_client = AsyncAnthropic(
+        api_key=os.environ.get("ANTHROPIC_API_KEY"),
+        http_client=http_client
+    )
 
 agent = Agent(
     "anthropic:claude-haiku-4-5-20251001",
@@ -34,9 +36,8 @@ agent = Agent(
     ),
 )
 
-# Monkey-patch the agent's model to use our custom Anthropic client
-# This is a workaround for local development SSL issues
-if hasattr(agent, '_model') and hasattr(agent._model, 'client'):
+# Apply SSL workaround only for local development
+if USE_SSL_WORKAROUND and hasattr(agent, '_model') and hasattr(agent._model, 'client'):
     agent._model.client = anthropic_client
 
 

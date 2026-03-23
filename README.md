@@ -70,6 +70,51 @@ We've included sample legal documents in `sample-docs/` for testing.
 
 ---
 
+## Production Deployment
+
+### Deploy to Railway (Cloud Hosting)
+
+**One-time setup:**
+
+1. Create `.env.prod` with your production secrets:
+```bash
+ANTHROPIC_API_KEY=your_key_here
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+UPLOAD_DIR=uploads
+MAX_UPLOAD_SIZE=26214400
+```
+
+2. Run the automated setup script:
+```bash
+./setup-railway.sh
+```
+
+The script will:
+- Login to Railway
+- Create project + PostgreSQL
+- Pause for you to connect GitHub repo (one click)
+- Configure all environment variables from `.env.prod`
+- Deploy your application
+- Show your public URL
+
+**After setup, deployments are automatic:**
+```bash
+git push origin main  # Railway auto-deploys!
+```
+
+**Your deployed app:** Check Railway dashboard for your URL
+
+### CI/CD Pipeline
+
+GitHub Actions automatically:
+- ✅ Runs linting and type checks on every PR
+- ✅ Deploys to Railway on push to main
+- ✅ Zero manual deployment steps
+
+**Workflow files:** `.github/workflows/`
+
+---
+
 ## Current Architecture
 
 ### Overview

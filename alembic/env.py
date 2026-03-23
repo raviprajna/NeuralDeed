@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -10,6 +11,10 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from takehome.db.models import Base
 
 config = context.config
+
+# Override database URL from environment variable (for Railway/production)
+if os.environ.get("DATABASE_URL"):
+    config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

@@ -36,6 +36,37 @@ app.add_middleware(
 
 from takehome.web.routers import conversations, documents, messages  # noqa: E402
 
+# Include API routers
 app.include_router(conversations.router)
 app.include_router(messages.router)
 app.include_router(documents.router)
+
+# Serve frontend static files in production
+import os
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+frontend_build_path = "/app/frontend/dist"
+
+if os.path.exists(frontend_build_path):
+    logger.info("Frontend build found, serving static files", path=frontend_build_path)
+
+    # Mount static assets first
+    app.mount("/assets", StaticFiles(directory=f"{frontend_build_path}/assets"), name="assets")
+
+    # SPAStaticFiles handles serving index.html for all non-matched routes
+    from starlette.staticfiles import StaticFiles as BaseStaticFiles
+
+    class SPAStaticFiles(BaseStaticFiles):
+        async def get_response(self, path: str, scope):
+            try:
+                return await super().get_response(path, scope)
+            except:
+                # Serve index.html for any non-existent path (SPA routing)
+                return await super().get_response("index.html", scope)
+
+    # Mount frontend - this must be LAST so API routes are matched first
+    app.mount("/", SPAStaticFiles(directory=frontend_build_path, html=True), name="frontend")
+else:
+    logger.warning("Frontend build not found, serving API only", path=frontend_build_path)
