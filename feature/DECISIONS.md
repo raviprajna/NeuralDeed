@@ -1,592 +1,472 @@
-# Implementation Decisions
+# Product Decisions: Why These 10 Features for MVP
 
-This document tracks all major decisions made during feature development, including rationale, alternatives considered, and outcomes.
-
----
-
-## Decision Framework
-
-For each feature decision, we document:
-1. **Context**: What problem are we solving?
-2. **Options Considered**: What approaches did we evaluate?
-3. **Decision Made**: What did we choose and why?
-4. **Trade-offs**: What did we gain and give up?
-5. **Success Criteria**: How will we know if this was the right choice?
+**Decision Date:** March 2026
+**Context:** Prioritizing MVP features for NeuralDeed based on market analysis, customer feedback, and Railway deployment constraints
 
 ---
 
-## Part 1: Multi-Document Conversations
+## The Prioritization Framework
 
-### Decision 1: Database Schema Changes
+We evaluated 25+ potential features using four criteria:
 
-**Context:**
-The database already supports multiple documents per conversation (one-to-many relationship). The constraint is only enforced in application code.
+1. **User Pain Intensity:** How badly do users need this? (Beta feedback)
+2. **Market Differentiation:** Does this beat competitors? (Market analysis)
+3. **Technical Feasibility:** Can we build it on Railway in 8-12 weeks? (Resource constraints)
+4. **Trust Impact:** Does this build user confidence? (Legal market requirement)
 
-**Options Considered:**
-1. **Keep existing schema, remove code constraint** (Recommended)
-   - Pros: No migration needed, fastest implementation
-   - Cons: None identified
-
-2. **Add new fields to documents table** (page_order, is_primary, etc.)
-   - Pros: Better organization
-   - Cons: Unnecessary complexity for v1
-
-3. **Create document_groups table**
-   - Pros: Flexible grouping
-   - Cons: Over-engineered for current needs
-
-**Decision Made:** Option 1 - Remove code constraint only
-
-**Rationale:**
-- Database schema already correct
-- Zero migration risk
-- Faster to implement
-- Can add metadata later if needed
-
-**Trade-offs:**
-- ✅ Gained: Speed, simplicity
-- ❌ Lost: None (can add features incrementally)
-
-**Success Criteria:**
-- Users can upload 5+ documents to one conversation
-- No performance degradation
-- No data integrity issues
-
-**Status:** ⏳ Pending Implementation
+Features were scored 1-10 on each criterion. Top 10 were selected for MVP.
 
 ---
 
-### Decision 2: Document List UI Placement
+## The Top 10: Why We Chose Each Feature
 
-**Context:**
-Need to show list of documents in a conversation. Must be easily accessible but not clutter the main chat area.
+### 1. Verification Layer & Confidence Scoring
 
-**Options Considered:**
+**Score:** 10/10/9/10 = 39/40
 
-**Option A: Expandable section in chat sidebar** (Recommended)
-```
-┌─────────────┐
-│ Conversations│
-│ > Active    │
-│             │
-│ Documents ▼ │
-│ 📄 Lease    │
-│ 📄 Title    │
-└─────────────┘
-```
-Pros:
-- Persistent visibility
-- Groups with conversation
-- Familiar pattern
+**Why This is #1:**
 
-Cons:
-- Takes sidebar space
-- Scrolling if many docs
+The customer feedback was crystal clear:
+- "Being confidently wrong is worse than being slow" - Partner, Firm B
+- "She got an answer that was completely fabricated... She doesn't trust it now" - Partner, Firm B
+- "I'd pay double the licence fee if the AI would just tell me when it's not sure" - Partner, Firm A
 
-**Option B: Dropdown in document viewer header**
-```
-┌─────────────────────┐
-│ [Select Doc ▼]     │
-│                     │
-│   [PDF View]        │
-└─────────────────────┘
-```
-Pros:
-- Saves space
-- Contextual to viewer
+**The Reality:** Hallucinations kill trust in legal tech. One bad answer and lawyers never come back. We've seen this destroy beta adoption - users excited in Week 1, gone by Week 3 after one bad experience.
 
-Cons:
-- Hidden when not needed
-- Extra click to see list
+**What Makes This Different from Competitors:**
+- Harvey AI and others focus on speed over accuracy
+- They don't show confidence scores or admit uncertainty
+- This is our BIGGEST competitive advantage
 
-**Option C: Horizontal tabs above chat**
-```
-┌──────────────────────────┐
-│ [Lease][Title][Environ] │
-├──────────────────────────┤
-│ Chat messages...         │
-```
-Pros:
-- Visible, clickable
-- Tab pattern familiar
+**Technical Fit for Railway:**
+- Two-pass verification is just two LLM calls (doable on Railway)
+- Confidence scoring is simple logic
+- No complex infrastructure needed
 
-Cons:
-- Doesn't scale (10+ docs)
-- Takes vertical space
-
-**Decision Made:** To Be Decided
-
-**Open Questions:**
-- How many documents is typical? (Affects scaling)
-- Should documents be always visible or on-demand?
-- Mobile considerations?
-
-**Next Steps:**
-- Review usage data for document counts
-- Create mockups for each option
-- User test with beta users
-
-**Status:** 🤔 Needs Discussion
+**The Risk if We Skip This:**
+We lose users after first hallucination. Game over. This is table stakes for legal AI, not a nice-to-have.
 
 ---
 
-### Decision 3: AI Context Management Strategy
+### 2. Surgical Citation System
 
-**Context:**
-With multiple documents, total context size can exceed model limits (200K tokens). Need strategy for which documents to include in prompts.
+**Score:** 10/9/10/9 = 38/40
 
-**Options Considered:**
+**Why This is #2:**
 
-**Option 1: Include All Documents Always**
-- Pros: Simple, comprehensive
-- Cons: Hits token limits quickly, expensive
-- Max documents: ~3-5 medium PDFs
+Another clear message from users:
+- "When it tells me section 4.2, it's magic. Genuinely magic." - Associate, Firm A
+- "When it doesn't cite anything specific, I have to go find it myself anyway, so what's the point?" - Associate, Firm A
 
-**Option 2: Smart Selection Based on Conversation**
-- Use recent messages to determine relevant documents
-- Pros: Efficient, scales better
-- Cons: Complex logic, may miss context
-- Max documents: ~10-15 PDFs
+**What This Solves:**
+Lawyers need to verify everything. Without exact citations, they spend just as much time checking the AI's work as they would reading the document themselves. Citations turn the tool from "interesting toy" to "essential workflow".
 
-**Option 3: Let User Choose (Checkbox selection)**
-```
-☑ Lease A
-☑ Title Report
-☐ Environmental
-☐ Survey
-```
-- Pros: User control, explicit
-- Cons: Extra friction, user burden
-- Max documents: Unlimited (user decides)
+**Market Differentiation:**
+- Harvey AI has "section references" but they're basic
+- Kira Systems has citations but no conversational AI
+- We combine both: conversational AI + surgical citations
 
-**Option 4: Hybrid Approach** (Recommended)
-- Auto-include: Documents mentioned in last 3 messages
-- Auto-include: Most recently uploaded document
-- Allow user to manually select additional docs
-- Pros: Best of both worlds
-- Cons: Most complex to implement
+**Technical Fit:**
+- Citation extraction is straightforward (chunk metadata + text extraction)
+- Jump-to-location just needs PDF coordinates (PDF.js provides this)
+- Hover previews are simple React components
 
-**Decision Made:** To Be Decided
-
-**Considerations:**
-- Beta users uploaded avg 1-2 docs per conversation
-- Edge case: Due diligence packages can have 20+ docs
-- Cost impact: Each token costs money
-
-**Testing Needed:**
-- What's the typical token usage for 1, 3, 5, 10 documents?
-- How often do users need all documents in context?
-- Can we detect which documents are relevant?
-
-**Status:** 🤔 Needs Discussion & Testing
+**Why Not #1:**
+Trust (verification) matters slightly more than convenience (citations). But this is a very close second.
 
 ---
 
-### Decision 4: Upload Flow UX
+### 3. Multi-Document Upload & Context
 
-**Context:**
-Need to design the flow for adding multiple documents to a conversation.
+**Score:** 9/8/10/7 = 34/40
 
-**Options Considered:**
+**Why This Made Top 3:**
 
-**Option A: Always-visible "Add Document" button**
-- Button persistent in chat window
-- Click → file picker → upload
-- Pros: Always discoverable
-- Cons: Button clutter
+Direct user request:
+- "I had to re-upload the same lease agreement in three different chats" - Senior Associate, Firm D
 
-**Option B: Upload button in document viewer**
-- Shows when no docs or in empty state
-- Pros: Contextual
-- Cons: Hidden when doc already shown
+**The Problem:**
+Real estate deals have 5-20 documents (leases, title reports, surveys, etc.). Current single-doc limitation forces users to create multiple conversations, losing context and wasting time.
 
-**Option C: Upload icon in message input area**
-- Paperclip icon next to send button
-- Familiar pattern (chat apps)
-- Pros: Natural, space-efficient
-- Cons: May be overlooked
+**Market Need:**
+- Harvey AI has "Vaults" (500 docs) but no cross-document intelligence
+- This is our opportunity to leap ahead
 
-**Option D: Drag & Drop Zone** (Recommended)
-- Entire chat area accepts drops
-- Visual overlay on drag
-- Plus: Button in sidebar for click-to-upload
-- Pros: Modern, flexible, power-user friendly
-- Cons: Needs clear visual feedback
+**Technical Feasibility:**
+- Database already supports it (one-to-many relationship)
+- Just need to remove artificial constraint
+- Context window management is the only challenge (we'll use smart chunking)
 
-**Decision Made:** To Be Decided
-
-**Questions:**
-- Should we support multi-file selection?
-- Show upload progress for large files?
-- Allow cancel during upload?
-
-**Status:** 🤔 Needs Discussion
+**Why Top 3:**
+Solves immediate pain + enables future features (comparison, search). This unlocks the product's full potential.
 
 ---
 
-## Part 2: Data-Driven Enhancements
+### 4. Document Comparison Mode
 
-### Decision 5: Addressing AI Hallucination
+**Score:** 9/9/8/7 = 33/40
 
-**Context:**
-Critical feedback: AI fabricates information not in documents. Partners losing trust. Quote: *"Being confidently wrong is worse than being slow."*
+**Why This is #4:**
 
-**Root Cause Analysis:**
-- Claude Haiku optimized for speed over accuracy
-- Prompts don't emphasize citation requirements
-- No verification of AI responses
-- No way for users to detect hallucinations
+User quote:
+- "I'd love to be able to compare what two different documents say about the same topic" - Associate, Firm F
 
-**Options Considered:**
+**Market Gap:**
+NO competitor has automated clause comparison with AI. Everyone does it manually or with basic diff tools. This is a genuine innovation opportunity.
 
-**Option 1: Switch to Claude Opus** (More accurate but slower/expensive)
-- Pros: Fewer hallucinations
-- Cons: 5x cost, 2x slower, may not solve completely
+**Use Case:**
+Compare indemnity clauses across 3 leases to find the most favorable terms. Lawyers do this manually today - takes hours. We can do it in 30 seconds.
 
-**Option 2: Enhanced System Prompts** (Recommended)
-```python
-"CRITICAL REQUIREMENTS:
-1. ONLY answer based on provided documents
-2. ALWAYS cite specific page/section
-3. If uncertain, say 'I cannot find this information'
-4. NEVER fabricate or infer information"
-```
-- Pros: Low cost, immediate impact
-- Cons: Not 100% guaranteed
+**Technical Complexity:**
+More complex than basic Q&A, but doable:
+- Extract relevant sections from each doc (RAG)
+- Compare with structured LLM prompt
+- Display in table format
 
-**Option 3: Post-Processing Verification**
-- After AI response, verify each claim against source docs
-- Highlight verified vs unverified statements
-- Pros: Catches hallucinations
-- Cons: Complex, slower responses
-
-**Option 4: Confidence Scoring + Mandatory Citations** (Recommended)
-- Require AI to provide confidence level (0-100%)
-- Mandate citations for every claim
-- Show confidence indicator to user
-- Flag low-confidence responses
-- Pros: Transparency, user can verify
-- Cons: Not prevention, just detection
-
-**Option 5: Retrieval-Augmented Generation (RAG)**
-- Chunk documents into embeddings
-- Retrieve relevant chunks for each question
-- Only include retrieved chunks in context
-- Pros: More grounded, scalable
-- Cons: Complex implementation, changes architecture
-
-**Decision Made:** Combination of Options 2 & 4
-
-**Implementation Plan:**
-1. Update system prompt with stricter requirements
-2. Add confidence scoring to responses
-3. Require citation format: [Document, Page, Section]
-4. Show confidence indicator in UI
-5. Extract and display quoted text from source
-
-**Rationale:**
-- Addresses immediate trust crisis
-- Low implementation complexity
-- Can iterate based on results
-- Preserves current architecture
-- Option to add RAG later if needed
-
-**Trade-offs:**
-- ✅ Gained: User trust, transparency, verifiability
-- ❌ Lost: Some response speed (more careful AI)
-
-**Success Criteria:**
-- Zero reports of fabricated clauses
-- 90%+ of responses have citations
-- 80%+ high-confidence responses
-- User survey: Trust score improves from 2.3 to 4.0+
-
-**Testing Approach:**
-- Create test suite of known-answer questions
-- Compare responses before/after changes
-- Track citation rates
-- Beta test with partners who complained
-
-**Status:** ✅ Decided - Ready for Implementation
+**Railway Fit:**
+All AI processing, no special infrastructure needed. Perfect for Railway.
 
 ---
 
-### Decision 6: Document Comparison Feature Priority
+### 5. Deal Workspaces & Context Persistence
 
-**Context:**
-Users want to compare clauses across multiple documents. Is this v1 scope?
+**Score:** 8/7/9/8 = 32/40
 
-**Data Points:**
-- 8 users mentioned comparison needs
-- Use case: Compare indemnity clause across 3 leases
-- Use case: Check if title report matches lease description
-- Workaround: Users currently open multiple tabs
+**Why This is #5:**
 
-**Options:**
+**The Scaling Problem:**
+As users get 10, 20, 50 deals, they need organization. Without deal workspaces, the app becomes unusable at scale.
 
-**Option A: Include in v1 (with Multi-Document)**
-- Build comparison mode alongside multi-doc upload
-- Pros: Complete feature set
-- Cons: Delays v1 launch
+**Context Persistence:**
+AI remembering "you asked about termination rights in Conversation #2" is magic for complex deals.
 
-**Option B: v1.5 Follow-up Feature**
-- Ship multi-doc upload first
-- Add comparison in next sprint
-- Pros: Faster initial launch
-- Cons: Incomplete workflow
+**Why Not Higher:**
+Not an immediate pain point (users start with 1-2 deals). But critical for retention and scaling to multiple users per firm.
 
-**Option C: Smart Default (No Special UI)**
-- Let users ask comparison questions naturally
-- AI handles comparison in regular chat
-- Example: "Compare the indemnity clauses in both leases"
-- Pros: Zero UI work, leverage AI
-- Cons: Less structured, harder to export
+**Technical Fit:**
+Simple database grouping + LLM context management. No new infrastructure.
 
-**Decision Made:** To Be Decided
-
-**Considerations:**
-- How complex is comparison feature?
-- Can we ship multi-doc without comparison?
-- Will users be satisfied with AI-powered comparison (Option C)?
-
-**Next Steps:**
-- Prototype comparison chat responses
-- Test if AI can do good comparisons without special UI
-- Decide based on prototype quality
-
-**Status:** 🤔 Needs Prototyping
+**The Long Game:**
+This sets us up for team collaboration features later. Foundation piece.
 
 ---
 
-### Decision 7: Report Export Format & Content
+### 6. Professional Report Generation
 
-**Context:**
-Users copy-pasting chat to Word. Need export feature. What format and content?
+**Score:** 8/6/8/6 = 28/40
 
-**User Quotes:**
-- "I'm copy-pasting answers into a Word doc for the client"
-- "Would be nice to export analysis reports"
+**Why This Made Top 10:**
 
-**Options Considered:**
+User complaint:
+- "Could you add some kind of report export? I'm copy-pasting answers from the chat into a Word doc" - Senior Associate, Firm E
 
-**Format Options:**
-- PDF: ✅ Professional, can't edit
-- DOCX: ✅ Editable, client-ready
-- Markdown: ❌ Too technical
-- HTML: ❌ Not standard in legal
+**The Workflow Gap:**
+AI analysis is useless if lawyers can't share it with clients. Report generation completes the workflow loop.
 
-**Content Options:**
+**Competitor Weakness:**
+Everyone has copy-paste. No one has professional, branded reports. Easy win.
 
-**A: Simple Chat Transcript**
-- All messages with timestamps
-- Source citations preserved
-- Pros: Simple, complete
-- Cons: Not polished for clients
+**Technical Fit:**
+- DOCX generation libraries exist (docx.js)
+- Template system is straightforward
+- Export is just file generation + download
 
-**B: AI-Generated Summary Report**
-- Executive summary
-- Key findings by category
-- Risk highlights
-- Recommendations
-- Pros: Professional, value-add
-- Cons: AI might hallucinate in summary
-
-**C: Structured Analysis Report**
-- Template-based (Due Diligence, Comparison, etc.)
-- Sections: Documents Reviewed, Findings, Concerns, etc.
-- Include chat Q&A in appendix
-- Pros: Professional, organized
-- Cons: More complex
-
-**Decision Made:** To Be Decided
-
-**Questions:**
-- Do we need multiple report types?
-- Should we show AI uncertainty in reports?
-- Include or exclude low-confidence responses?
-- How much branding/customization?
-
-**User Research Needed:**
-- What do lawyers actually send to clients?
-- Interview beta users on report format preferences
-
-**Status:** 🤔 Needs User Research
+**Why Not Higher:**
+Nice-to-have, not must-have. Users can copy-paste today. But this saves them time and looks professional.
 
 ---
 
-## Decision 8: Implementation Sequence
+### 7. Semantic Document Search
 
-**Context:**
-We have 7+ features planned. What order maximizes value and reduces risk?
+**Score:** 7/6/9/5 = 27/40
 
-**Factors:**
-- User pain severity
-- Implementation complexity
-- Dependencies between features
-- Quick wins vs long-term value
+**Why This is #7:**
 
-**Proposed Sequence:**
+User request:
+- "I miss being able to ctrl+F within it" - Trainee, Firm H
 
-**Sprint 1: Trust & Multi-Doc Foundation** (Weeks 1-2)
-1. Enhanced citations + confidence scoring (Critical trust issue)
-2. Multi-document upload (Remove constraint)
-3. Document list UI (Basic version)
-4. Document viewer switching
+**The Feature:**
+Search across all documents in a deal to find specific clauses. Both keyword (exact match) and semantic (natural language).
 
-Rationale: Fix trust issues immediately while enabling multi-doc
+**Technical Fit for Railway:**
+- PostgreSQL full-text search (built-in, no extra cost)
+- Vector search using pgvector extension
+- No separate search infrastructure needed
 
-**Sprint 2: Multi-Doc Polish** (Weeks 3-4)
-1. Drag & drop upload
-2. Multi-doc AI context handling
-3. Upload flow improvements
-4. Document management (remove, reorder)
+**Why This Ranks #7:**
+Useful but not critical. Users can manually search PDFs today. This is a quality-of-life improvement, not a game-changer.
 
-Rationale: Complete multi-doc experience
-
-**Sprint 3: Analysis Tools** (Weeks 5-6)
-1. Document search (keyword + semantic)
-2. Comparison mode (if needed after testing)
-3. Quote extraction UI
-4. Enhanced source display
-
-Rationale: Improve analysis workflow
-
-**Sprint 4: Export & Polish** (Weeks 7-8)
-1. Report generation
-2. Annotation tools
-3. UX polish based on feedback
-4. Performance optimization
-
-Rationale: Workflow integration
-
-**Alternative Sequence:**
-Start with multi-doc (Part 1 requirement) before trust features
-
-**Decision Made:** To Be Decided
-
-**Questions:**
-- Can we afford to delay trust fixes?
-- Should Part 1 be completely done before Part 2?
-- Parallel workstreams?
-
-**Status:** 🤔 Needs Discussion
+**The Upside:**
+Semantic search ("Find force majeure clause") feels like magic. Good demo feature.
 
 ---
 
-## Open Questions & Brainstorming Topics
+### 8. Real Estate Domain Intelligence
 
-### Question 1: How Many Documents is "Too Many"?
+**Score:** 6/10/6/5 = 27/40
 
-**Context:** Need to set expectations and design for realistic limits
+**Why This is #8:**
 
-**Data Needed:**
-- What's the largest due diligence package beta users have?
-- At what point does UX break down?
-- What's the cost impact of 20 documents per conversation?
+**Market Positioning:**
+This is our "Harvey for Real Estate" differentiator. Generic legal AI doesn't understand metes & bounds, title exceptions, or lease terms.
 
-**Options:**
-- Hard limit (e.g., 10 documents max)
-- Soft limit with warning
-- No limit but smart context management
-- Tiered pricing based on document count
+**The Features:**
+- Document classification (deed vs lease vs title report)
+- Auto-extract key fields (parties, dates, property address)
+- Real estate glossary (500+ terms)
 
-**Status:** 📊 Needs Data Analysis
+**Why Not Higher:**
+- Harder to build (domain-specific training)
+- Not immediately painful for users
+- Can be added incrementally
 
----
-
-### Question 2: Should Search be Per-Conversation or Global?
-
-**Scenarios:**
-- **Per-Conversation**: "Find indemnity in these 3 leases"
-- **Global**: "Show me all indemnity clauses I've ever reviewed"
-
-**Trade-offs:**
-- Per-conversation: Simpler, more focused
-- Global: More powerful, harder to build
-
-**User Need:**
-- Do lawyers need cross-conversation search?
-- Is the value worth the complexity?
-
-**Status:** 🤔 Needs User Interviews
+**Why Include in MVP:**
+Marketing. We need something that screams "real estate specialist" to differentiate from Harvey AI and others.
 
 ---
 
-### Question 3: Collaboration Features in Scope?
+### 9. Authentication & Access Control
 
-**User Feedback:**
-- "taking screenshots to share with team"
-- "my associate tried it"
+**Score:** 10/3/10/8 = 31/40
 
-**Potential Features:**
-- Share conversations with team members
-- Comments/annotations by multiple users
-- Team workspaces
+**Why This is #9 (Despite High Score):**
 
-**Questions:**
-- Is this v1 or v2?
-- What's the MVP for collaboration?
-- Authentication/permissions complexity?
+**The Reality:**
+Security is non-negotiable, but we've been testing without it in beta. We can't launch to paid users without proper authentication.
 
-**Status:** 🔮 Future Consideration
+**What We Need:**
+- Email/password login
+- Session management
+- Row-level security (users only see their data)
+- Basic role-based access control
 
----
+**Why Not Higher:**
+Not a feature users see or care about directly. It's infrastructure. But critical for production.
 
-## Decision Log Template
+**Technical Fit:**
+- Simple email/password auth (bcrypt + JWT)
+- Railway supports environment variables for secrets
+- Supabase RLS or custom middleware
 
-Use this template for new decisions:
-
-```markdown
-### Decision X: [Title]
-
-**Context:**
-[What problem are we solving? What's the background?]
-
-**Options Considered:**
-1. Option A
-   - Pros:
-   - Cons:
-2. Option B
-   - Pros:
-   - Cons:
-
-**Decision Made:** [Option X] or [To Be Decided]
-
-**Rationale:**
-[Why this choice?]
-
-**Trade-offs:**
-- ✅ Gained:
-- ❌ Lost:
-
-**Success Criteria:**
-[How will we measure success?]
-
-**Status:** [⏳ Pending | 🤔 Needs Discussion | ✅ Decided | ❌ Rejected]
-```
+**The Timeline:**
+This is actually first to build (need it for testing other features). But ranked by user value, not build order.
 
 ---
 
-## Next Steps
+### 10. System Monitoring & Observability
 
-1. **Review this document** with the team
-2. **Make decisions** on open items marked "To Be Decided"
-3. **Prototype** uncertain features (comparison mode, context strategy)
-4. **User test** UI mockups with beta users
-5. **Update** this document as decisions are made
-6. **Start implementation** with Sprint 1 priorities
+**Score:** 9/2/10/9 = 30/40
+
+**Why This is #10:**
+
+**Production Readiness:**
+We can't ship to paying customers without monitoring. Period.
+
+**What We Need:**
+- Error tracking (Sentry)
+- Performance monitoring (Railway metrics)
+- Usage analytics (PostHog)
+- Alerts for critical issues
+
+**Why This is Last:**
+Users don't see it. It's for us (developers/operators). But essential for running a reliable service.
+
+**Railway Advantage:**
+Railway has built-in logging and metrics. We just need to integrate Sentry + PostHog. Straightforward.
+
+**The SLOs:**
+- 99.5% uptime
+- < 1% API error rate
+- < 300ms search response time
+- < 5% hallucination rate
+
+Without monitoring, we can't measure these. Can't improve what we don't measure.
 
 ---
 
-## Notes
+## What We Explicitly Cut (And Why)
 
-- This is a living document - update as we learn
-- Include reasoning for *rejected* options (learn from what didn't work)
-- Reference user quotes and data to keep decisions grounded
-- Revisit decisions if new information emerges
-- Don't be afraid to change course if needed
+### Features 11-15 (Post-MVP Tier 1)
+
+**11. Annotation & Highlighting**
+- Users want this: "I find myself taking screenshots to highlight sections" - Associate, Firm C
+- But workaround exists (screenshots)
+- More complex than MVP features (canvas manipulation, persistence)
+- **Decision:** Include in Month 3-4, not MVP
+
+**12. Collaborative Issue Tracking**
+- Great for teams, but MVP targets individual lawyers first
+- Requires WebSockets, notifications, real-time sync
+- **Decision:** Team features are Phase 2 (after we prove individual value)
+
+**13. Document Version Comparison**
+- Useful but niche (only for contract redlining)
+- Technically complex (diff algorithms)
+- **Decision:** Post-MVP
+
+**14. Real-Time Collaboration**
+- Cool but not critical
+- Requires WebSocket infrastructure (adds complexity)
+- **Decision:** Wait until we have 5+ users per firm
+
+**15. Advanced Analytics Dashboard**
+- Nice for admins, not end users
+- Can use Railway/PostHog built-in dashboards initially
+- **Decision:** Build custom dashboard post-MVP
+
+### Features 16-20 (Post-MVP Tier 2)
+
+**Visual Document Relationships**
+- D3.js timelines and graphs look cool in demos
+- Minimal user demand from beta
+- **Decision:** Year 2 feature, not MVP
+
+**Clause Library**
+- Interesting long-term (build knowledge base over time)
+- Zero value on Day 1 (library is empty)
+- **Decision:** Post-MVP, after users have processed 100+ docs
+
+**Multi-Stakeholder Views**
+- Expands market (brokers, lenders)
+- But beachhead is lawyers first
+- Complex permissions system
+- **Decision:** Month 6-9, after lawyer product is solid
+
+**Mobile App**
+- Users want it, but web app works on mobile browsers
+- Native apps are 2x development effort
+- **Decision:** Year 2, after web app is proven
+
+**Practice Management Integrations**
+- Clio, MyCase, NetDocuments connectors
+- Important for enterprise sales, not early adopters
+- **Decision:** Month 9-12, for enterprise deals
 
 ---
 
-*Last Updated: 2026-03-22*
-*Next Review: Before Sprint 1 kickoff*
+## The Railway Constraint
+
+**Why Railway Matters:**
+
+We're deploying on Railway, not AWS/GCP. This affects what we can build:
+
+**Railway Strengths:**
+- Monorepo deployment (frontend + backend together)
+- Managed PostgreSQL (with pgvector support)
+- Redis plugin (for caching)
+- Automatic SSL/HTTPS
+- Simple environment variables
+- Built-in logging and metrics
+
+**Railway Limitations:**
+- No managed vector database (so we use PostgreSQL + pgvector)
+- No Lambda/Cloud Functions (so we use background workers)
+- No managed Kubernetes (so we keep architecture simple)
+
+**Our Architectural Decisions Based on Railway:**
+
+1. **No Pinecone:** Use PostgreSQL + pgvector extension instead
+   - Pro: One less service to manage
+   - Con: Slightly slower vector search (acceptable for MVP)
+
+2. **No Separate Job Queue:** Use PostgreSQL + pg_cron for scheduled tasks
+   - Pro: Simpler stack
+   - Con: Less robust than Celery/Bull, but fine for MVP
+
+3. **Cloudflare R2 for Storage:** Not Railway, but Railway doesn't have object storage
+   - R2 is S3-compatible and cheaper
+   - Perfect fit for document storage
+
+4. **Monorepo Deployment:** Frontend + backend in one Railway service
+   - Pro: Simpler deployments, shared types
+   - Con: Can't scale frontend/backend independently (not a problem at MVP scale)
+
+**The Bottom Line:**
+Railway constraints pushed us toward simpler architecture. This is actually good for MVP - less moving parts, faster shipping, easier debugging.
+
+---
+
+## The Build Timeline
+
+**Weeks 1-2:** Authentication & database schema
+**Weeks 3-4:** Document upload & processing pipeline
+**Weeks 5-6:** Basic RAG system (query, retrieve, answer)
+**Weeks 7-8:** Verification layer & confidence scoring
+**Weeks 9-10:** Citation system & UI
+**Weeks 11-12:** Multi-doc support & comparison mode
+**Weeks 13-14:** Deal workspaces & search
+**Weeks 15-16:** Report generation & domain intelligence
+**Weeks 17-18:** Monitoring, testing, bug fixes
+**Weeks 19-20:** Beta testing with 10 lawyers, iterate
+
+**Total:** 20 weeks (5 months) to production-ready MVP
+
+---
+
+## Success Criteria: How We'll Know We're Right
+
+**Month 1 (Beta Launch with 10 lawyers):**
+- Users upload 20+ documents
+- Users ask 100+ questions
+- Hallucination rate < 5%
+
+**Month 3 (Paid Launch with 50 users):**
+- 80% beta → paid conversion
+- Users pay $75-150/month
+- 4.0+ trust score
+- 60%+ citation click-through rate
+
+**Month 6 (Product-Market Fit):**
+- 90% monthly retention
+- Users saying "I can't do my job without this"
+- Net Promoter Score > 40
+- Organic word-of-mouth growth
+
+**What Will Make Us Pivot:**
+- Hallucination rate stays > 10% (trust problem)
+- < 50% beta → paid conversion (pricing problem)
+- Users stop using after 2 weeks (product doesn't solve real problem)
+
+---
+
+## The Honest Assessment
+
+**What We're Betting On:**
+
+1. Lawyers will pay for trust (verification + confidence) more than speed
+2. Real estate lawyers are underserved (no Harvey equivalent)
+3. Citation quality beats citation quantity
+4. Multi-doc workflows are the unlock for complex deals
+
+**What Could Go Wrong:**
+
+1. OpenAI costs blow up (mitigate: usage-based pricing + caching)
+2. Harvey AI launches real estate product (mitigate: move fast, build moat)
+3. Hallucinations remain too high (mitigate: verification layer + manual review option)
+4. Users don't pay $75-150/month (mitigate: free tier + usage-based pricing)
+
+**Why We're Confident:**
+
+The market research is clear. Customer feedback is strong. Competitors have weaknesses we can exploit. Technology is mature enough (LLMs work). And we're focused - 10 features, not 25.
+
+Most importantly: Users are in pain. They're spending 8 hours per deal on document review. If we can make it 45 minutes with high trust, they'll pay. That's our bet.
+
+---
+
+## The One Thing We Won't Compromise On
+
+**Trust.**
+
+Every decision - from verification layer to citation system to "I don't know" responses - is about building trust.
+
+In legal tech, you get one shot. One bad hallucination and you're done. So we're building for trust first, speed second, features third.
+
+That's why verification is Feature #1. That's why we have confidence scores. That's why we admit uncertainty.
+
+We'd rather ship 5 features that lawyers trust than 20 features they don't.
+
+---
+
+*These decisions will be revisited after MVP launch based on user data. But this is our best hypothesis today based on market research, customer feedback, and technical constraints.*
+
+*Decision Document v1.0 - March 2026*
