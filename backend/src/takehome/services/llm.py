@@ -267,22 +267,24 @@ async def generate_starter_questions(document_text: str, document_names: list[st
         # Parse the questions
         lines = [line.strip() for line in questions_text.split('\n') if line.strip()]
         questions = []
-        for line in lines[:4]:  # Take only first 4
+        for line in lines:
             # Remove numbering like "1.", "1)", etc.
             clean = line.lstrip('0123456789.)- ').strip()
-            if clean:
+            if clean and len(questions) < 4:  # Only take first 4
                 questions.append(clean)
 
-        # Fallback to generic if parsing fails
-        if len(questions) < 4:
-            return [
-                "What are the key terms and conditions?",
-                "Are there any concerning clauses?",
-                "Summarize the main obligations",
-                "What are the critical dates and deadlines?"
-            ]
+        # Pad with generic questions if we got fewer than 4
+        generic = [
+            "What are the key terms and conditions?",
+            "Are there any concerning clauses?",
+            "Summarize the main obligations",
+            "What are the critical dates and deadlines?"
+        ]
 
-        return questions[:4]
+        while len(questions) < 4:
+            questions.append(generic[len(questions)])
+
+        return questions[:4]  # Ensure exactly 4 questions
     except Exception:
         # Return generic fallbacks on error
         return [

@@ -39,14 +39,15 @@ export function ChatWindow({
 	]);
 	const [loadingQuestions, setLoadingQuestions] = useState(false);
 
-	// Load dynamic starter questions when documents are added
+	// Load dynamic starter questions once when documents are added
 	useEffect(() => {
 		if (conversationId && hasDocument && messages.length === 0 && !loadingQuestions) {
 			setLoadingQuestions(true);
 			api.fetchStarterQuestions(conversationId)
 				.then(questions => {
-					if (questions && questions.length > 0) {
-						setStarterQuestions(questions);
+					if (questions && questions.length >= 4) {
+						// Take exactly 4 questions
+						setStarterQuestions(questions.slice(0, 4));
 					}
 				})
 				.catch(err => {
@@ -56,7 +57,9 @@ export function ChatWindow({
 					setLoadingQuestions(false);
 				});
 		}
-	}, [conversationId, hasDocument, messages.length, loadingQuestions]);
+	// Only run when conversation or document state changes, not on every render
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [conversationId, hasDocument]);
 
 	// Auto-scroll to bottom when new messages arrive or during streaming
 	const messagesLength = messages.length;
