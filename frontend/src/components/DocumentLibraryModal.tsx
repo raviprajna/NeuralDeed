@@ -495,10 +495,10 @@ export function DocumentLibraryModal({
 							<Button
 								onClick={linkSelectedDocuments}
 								disabled={selectedDocs.size === 0 && initialLinkedIds.size === 0}
-								className="bg-gradient-to-br from-brand-500 to-brand-600 text-white hover:from-brand-600 hover:to-brand-700"
+								className="bg-gradient-to-br from-brand-500 to-brand-600 text-white hover:from-brand-600 hover:to-brand-700 focus-visible:outline-none"
 							>
-								<Check className="mr-2 h-4 w-4" />
-								Apply Changes
+								<Link2 className="mr-2 h-4 w-4" />
+								Link Documents
 							</Button>
 						)}
 					</div>
