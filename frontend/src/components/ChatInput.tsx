@@ -1,4 +1,4 @@
-import { Folder, SendHorizontal } from "lucide-react";
+import { Paperclip, SendHorizontal } from "lucide-react";
 import { type KeyboardEvent, useCallback, useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -57,14 +57,14 @@ export function ChatInput({
 								<Button
 									variant="ghost"
 									size="icon"
-									className="h-9 w-9 flex-shrink-0 rounded-full hover:bg-neutral-100"
+									className="h-9 w-9 flex-shrink-0 rounded-full hover:bg-neutral-100 focus-visible:outline-none"
 									onClick={onOpenLibrary}
 								>
-									<Folder className="h-5 w-5 text-neutral-600" />
+									<Paperclip className="h-5 w-5 text-neutral-600" />
 								</Button>
 							</div>
 						</TooltipTrigger>
-						<TooltipContent side="top">Open document library</TooltipContent>
+						<TooltipContent side="top">Attach documents</TooltipContent>
 					</Tooltip>
 
 					<textarea

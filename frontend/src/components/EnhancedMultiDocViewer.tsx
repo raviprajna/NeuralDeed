@@ -350,7 +350,7 @@ export function EnhancedMultiDocViewer({
 			/>
 
 			{/* Header with Inline Search */}
-			<div className="flex items-center border-b border-neutral-100 bg-gradient-to-r from-white to-neutral-50 px-4 py-3 gap-3">
+			<div className="flex items-center justify-between border-b border-neutral-100 bg-gradient-to-r from-white to-neutral-50 px-4 py-3 gap-3">
 				<div className="flex items-center gap-2">
 					<FileText className="h-4 w-4 text-brand-600" />
 					<span className="text-sm font-semibold text-neutral-900">Documents</span>
@@ -359,7 +359,7 @@ export function EnhancedMultiDocViewer({
 					</div>
 				</div>
 
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-2 ml-auto">
 					{showSearch ? (
 						<form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="flex items-center gap-2 rounded-full border-2 border-brand-400 bg-white pl-3 pr-2 py-1.5 shadow-md hover:shadow-lg transition-all">
 							<Search className="h-4 w-4 text-brand-500 flex-shrink-0" />

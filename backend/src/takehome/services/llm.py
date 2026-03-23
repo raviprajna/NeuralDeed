@@ -200,11 +200,19 @@ def extract_citations(answer: str, document_text: str | None, document_name_to_i
                     extracted_text = doc_content[start:end].strip()
                     extracted_text = " ".join(extracted_text.split())
 
-                    # Extract page number from document structure
+                    # Extract page number by finding which page section contains this match
                     if "--- Page" in doc_content:
+                        # Calculate position in document to find the right page
+                        match_position = doc_match.start()
                         pages = doc_content.split("--- Page ")
-                        for idx, page_content in enumerate(pages[1:], 1):
-                            if search_pattern in page_content:
+                        cumulative_pos = 0
+
+                        for idx, page_section in enumerate(pages[1:], 1):
+                            page_with_marker = "--- Page " + page_section
+                            cumulative_pos += len(page_with_marker)
+
+                            # Check if our match falls within this page
+                            if match_position < cumulative_pos:
                                 page_number = idx
                                 break
                     break

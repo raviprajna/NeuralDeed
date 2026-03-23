@@ -14,6 +14,7 @@ export default function App() {
 	const [targetPage, setTargetPage] = useState<number | undefined>(undefined);
 	const [highlightText, setHighlightText] = useState<string | undefined>(undefined);
 	const [triggerDocSearch, setTriggerDocSearch] = useState(false);
+	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
 	const {
 		conversations,
@@ -140,6 +141,8 @@ export default function App() {
 					onCreate={handleCreate}
 					onDelete={remove}
 					onOpenLibrary={handleOpenLibrary}
+					collapsed={sidebarCollapsed}
+					onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
 				/>
 
 				<ChatWindow

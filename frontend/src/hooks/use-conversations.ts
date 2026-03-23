@@ -13,6 +13,11 @@ export function useConversations() {
 			setError(null);
 			const data = await api.fetchConversations();
 			setConversations(data);
+
+			// Auto-select the most recent conversation if none selected
+			if (!selectedId && data.length > 0 && data[0]) {
+				setSelectedId(data[0].id);
+			}
 		} catch (err) {
 			setError(
 				err instanceof Error ? err.message : "Failed to load conversations",
@@ -20,7 +25,7 @@ export function useConversations() {
 		} finally {
 			setLoading(false);
 		}
-	}, []);
+	}, [selectedId]);
 
 	useEffect(() => {
 		refresh();
