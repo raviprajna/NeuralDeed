@@ -39,6 +39,7 @@ interface EnhancedMultiDocViewerProps {
 	onDocumentUploaded: () => void;
 	onDocumentRemove?: (documentId: string) => void;
 	conversationId?: string;
+	triggerSearch?: boolean;
 }
 
 export function EnhancedMultiDocViewer({
@@ -50,6 +51,7 @@ export function EnhancedMultiDocViewer({
 	onDocumentUploaded,
 	onDocumentRemove,
 	conversationId,
+	triggerSearch,
 }: EnhancedMultiDocViewerProps) {
 	const [width, setWidth] = useState(DEFAULT_WIDTH);
 	const [dragging, setDragging] = useState(false);
@@ -61,9 +63,11 @@ export function EnhancedMultiDocViewer({
 	const [showSearch, setShowSearch] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searching, setSearching] = useState(false);
+	const [searchResultCount, setSearchResultCount] = useState(0);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const tabsContainerRef = useRef<HTMLDivElement>(null);
 	const pageContainerRef = useRef<HTMLDivElement>(null);
+	const searchInputRef = useRef<HTMLInputElement>(null);
 
 	const activeDoc = documents.find((d) => d.id === activeDocumentId) || documents[0];
 
@@ -72,6 +76,17 @@ export function EnhancedMultiDocViewer({
 			onDocumentChange?.(documents[0].id);
 		}
 	}, [documents, activeDoc, onDocumentChange]);
+
+	// Handle Ctrl+F trigger
+	useEffect(() => {
+		if (triggerSearch && documents.length > 0) {
+			setShowSearch(true);
+			// Focus the search input
+			setTimeout(() => {
+				searchInputRef.current?.focus();
+			}, 100);
+		}
+	}, [triggerSearch, documents.length]);
 
 	// Navigate to target page when citation is clicked
 	useEffect(() => {
@@ -212,15 +227,20 @@ export function EnhancedMultiDocViewer({
 		if (!searchQuery.trim() || documents.length === 0 || !conversationId) return;
 
 		setSearching(true);
+		setSearchResultCount(0);
 
 		try {
 			const results = await api.searchDocuments(conversationId, searchQuery);
 
 			if (results.length === 0) {
+				setSearchResultCount(0);
 				alert('No matches found');
 				setSearching(false);
 				return;
 			}
+
+			// Set result count
+			setSearchResultCount(results.length);
 
 			// Take the first result
 			const firstResult = results[0];
@@ -368,23 +388,40 @@ export function EnhancedMultiDocViewer({
 						<div className="flex flex-1 items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2">
 							<Search className="h-4 w-4 text-neutral-400" />
 							<input
+								ref={searchInputRef}
 								type="text"
 								value={searchQuery}
-								onChange={(e) => setSearchQuery(e.target.value)}
+								onChange={(e) => {
+									setSearchQuery(e.target.value);
+									if (!e.target.value) setSearchResultCount(0);
+								}}
 								onKeyDown={(e) => {
 									if (e.key === 'Enter') {
 										e.preventDefault();
 										handleSearch();
 									}
+									if (e.key === 'Escape') {
+										setShowSearch(false);
+										setSearchQuery('');
+										setSearchResultCount(0);
+									}
 								}}
-								placeholder="Search across all documents..."
+								placeholder="Search across all documents... (Ctrl+F)"
 								className="flex-1 bg-transparent text-sm outline-none placeholder:text-neutral-400"
 								disabled={searching}
 							/>
+							{searchResultCount > 0 && (
+								<span className="text-xs text-neutral-600 font-medium mr-2">
+									{searchResultCount} {searchResultCount === 1 ? 'result' : 'results'}
+								</span>
+							)}
 							{searchQuery && !searching && (
 								<button
 									type="button"
-									onClick={() => setSearchQuery("")}
+									onClick={() => {
+										setSearchQuery("");
+										setSearchResultCount(0);
+									}}
 									className="text-neutral-400 hover:text-neutral-600"
 								>
 									<X className="h-4 w-4" />

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ChatSidebar } from "./components/ChatSidebar";
 import { ChatWindow } from "./components/ChatWindow";
 import { DocumentLibraryModal } from "./components/DocumentLibraryModal";
@@ -13,6 +13,7 @@ export default function App() {
 	const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
 	const [targetPage, setTargetPage] = useState<number | undefined>(undefined);
 	const [highlightText, setHighlightText] = useState<string | undefined>(undefined);
+	const [triggerDocSearch, setTriggerDocSearch] = useState(false);
 
 	const {
 		conversations,
@@ -125,6 +126,22 @@ export default function App() {
 		[refreshDocument, refreshConversations],
 	);
 
+	// Global Ctrl+F handler
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+				e.preventDefault();
+				// Trigger document search (default behavior)
+				setTriggerDocSearch(true);
+				// Reset after trigger
+				setTimeout(() => setTriggerDocSearch(false), 100);
+			}
+		};
+
+		window.addEventListener('keydown', handleKeyDown);
+		return () => window.removeEventListener('keydown', handleKeyDown);
+	}, []);
+
 	return (
 		<TooltipProvider delayDuration={200}>
 			<div className="flex h-screen bg-neutral-50 bg-mesh-light">
@@ -162,6 +179,7 @@ export default function App() {
 					onDocumentUploaded={handleDocumentUploaded}
 					onDocumentRemove={handleDocumentRemove}
 					conversationId={selectedId || undefined}
+					triggerSearch={triggerDocSearch}
 				/>
 
 				{/* Global Document Library Modal */}
