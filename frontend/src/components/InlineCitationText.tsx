@@ -1,4 +1,6 @@
 import { FileText } from "lucide-react";
+import { Streamdown } from "streamdown";
+import "streamdown/styles.css";
 import type { Citation } from "../types";
 
 interface InlineCitationTextProps {
@@ -13,7 +15,11 @@ interface InlineCitationTextProps {
  */
 export function InlineCitationText({ content, citations, onCitationClick }: InlineCitationTextProps) {
 	if (!citations || citations.length === 0) {
-		return <div className="prose prose-sm max-w-none">{content}</div>;
+		return (
+			<div className="prose prose-sm max-w-none">
+				<Streamdown>{content}</Streamdown>
+			</div>
+		);
 	}
 
 	// Split content by paragraphs
@@ -32,10 +38,10 @@ export function InlineCitationText({ content, citations, onCitationClick }: Inli
 				);
 
 				return (
-					<p key={paraIdx} className="mb-4 leading-relaxed">
-						{para}
+					<div key={paraIdx} className="mb-4">
+						<Streamdown>{para}</Streamdown>
 						{citationsForPara.length > 0 && (
-							<>
+							<span className="inline">
 								{citationsForPara.map((citation, idx) => {
 									const citationNumber = citations.indexOf(citation) + 1;
 									return (
@@ -69,9 +75,9 @@ export function InlineCitationText({ content, citations, onCitationClick }: Inli
 										</button>
 									);
 								})}
-							</>
+							</span>
 						)}
-					</p>
+					</div>
 				);
 			})}
 
