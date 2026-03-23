@@ -75,7 +75,7 @@ export function ChatSidebar({
 								transition={{ duration: 0.15 }}
 							>
 								<div
-									className={`group relative flex w-full items-center rounded-lg px-3 py-2.5 transition-colors ${
+									className={`group relative flex w-full items-center rounded-lg px-3 py-2.5 transition-colors cursor-pointer ${
 										selectedId === conversation.id
 											? "bg-neutral-100"
 											: "hover:bg-neutral-50"
@@ -85,11 +85,11 @@ export function ChatSidebar({
 								>
 									<button
 										type="button"
-										className="absolute inset-0"
+										className="absolute inset-0 z-0 cursor-pointer"
 										onClick={() => onSelect(conversation.id)}
 										aria-label={`Select conversation: ${conversation.title}`}
 									/>
-									<div className="relative z-0 min-w-0 overflow-hidden" style={{ width: 'calc(100% - 36px)' }}>
+									<div className="relative z-[1] pointer-events-none min-w-0 overflow-hidden" style={{ width: 'calc(100% - 36px)' }}>
 										<p className="truncate text-sm font-medium text-neutral-800 leading-tight" title={conversation.title}>
 											{conversation.title.length > 20 ? `${conversation.title.slice(0, 20)}...` : conversation.title}
 										</p>
@@ -100,7 +100,7 @@ export function ChatSidebar({
 
 									<button
 										type="button"
-										className={`relative z-10 flex-shrink-0 rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-red-500 transition-all ${
+										className={`relative z-[2] flex-shrink-0 rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-red-500 transition-all ${
 											hoveredId === conversation.id ? 'opacity-100' : 'opacity-30'
 										}`}
 										style={{ width: '28px', height: '28px' }}

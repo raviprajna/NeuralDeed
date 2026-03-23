@@ -43,57 +43,59 @@ export function ChatInput({
 		const textarea = textareaRef.current;
 		if (!textarea) return;
 		textarea.style.height = "auto";
-		const newHeight = Math.min(textarea.scrollHeight, 300); // Increased max height like Gemini
+		const newHeight = Math.min(textarea.scrollHeight, 300);
 		textarea.style.height = `${newHeight}px`;
 	}, []);
 
-
 	return (
-		<div className="border-t border-neutral-200 bg-white p-3">
-			<div className="flex items-end gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2">
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<div>
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 flex-shrink-0"
-								onClick={onOpenLibrary}
-							>
-								<Folder className="h-4 w-4 text-neutral-500" />
-							</Button>
-						</div>
-					</TooltipTrigger>
-					<TooltipContent>Open document library</TooltipContent>
-				</Tooltip>
+		<div className="p-4 bg-transparent">
+			<div className="mx-auto max-w-3xl">
+				<div className="flex items-end gap-3 rounded-[28px] border-2 border-brand-400 bg-white px-5 py-4 shadow-lg hover:shadow-xl transition-all">
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<div>
+								<Button
+									variant="ghost"
+									size="icon"
+									className="h-9 w-9 flex-shrink-0 rounded-full hover:bg-neutral-100"
+									onClick={onOpenLibrary}
+								>
+									<Folder className="h-5 w-5 text-neutral-600" />
+								</Button>
+							</div>
+						</TooltipTrigger>
+						<TooltipContent side="top">Open document library</TooltipContent>
+					</Tooltip>
 
-				<textarea
-					ref={textareaRef}
-					value={value}
-					onChange={(e) => setValue(e.target.value)}
-					onInput={handleInput}
-					onKeyDown={handleKeyDown}
-					placeholder={hasDocument ? "Ask about your real estate documents..." : "Link or upload documents to start asking questions"}
-					rows={1}
-					className="max-h-[300px] min-h-[40px] flex-1 resize-none bg-transparent py-2 text-sm text-neutral-800 placeholder-neutral-400 outline-none"
-					disabled={disabled || !hasDocument}
-				/>
-
-				<Button
-					variant="ghost"
-					size="icon"
-					className="h-8 w-8 flex-shrink-0"
-					disabled={!value.trim() || disabled}
-					onClick={handleSend}
-				>
-					<SendHorizontal
-						className={`h-4 w-4 ${
-							value.trim() && !disabled
-								? "text-neutral-900"
-								: "text-neutral-300"
-						}`}
+					<textarea
+						ref={textareaRef}
+						value={value}
+						onChange={(e) => setValue(e.target.value)}
+						onInput={handleInput}
+						onKeyDown={handleKeyDown}
+						placeholder={hasDocument ? "Ask about your real estate documents..." : "Link or upload documents to start asking questions"}
+						rows={3}
+						className="max-h-[300px] min-h-[72px] flex-1 resize-none bg-transparent border-none py-2 text-[15px] leading-relaxed text-neutral-900 placeholder-neutral-400 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none"
+						style={{ boxShadow: 'none', border: 'none', outline: 'none' }}
+						disabled={disabled || !hasDocument}
 					/>
-				</Button>
+
+					<Button
+						variant="ghost"
+						size="icon"
+						className="h-9 w-9 flex-shrink-0 rounded-full hover:bg-brand-100 disabled:opacity-40"
+						disabled={!value.trim() || disabled}
+						onClick={handleSend}
+					>
+						<SendHorizontal
+							className={`h-5 w-5 ${
+								value.trim() && !disabled
+									? "text-brand-600"
+									: "text-neutral-300"
+							}`}
+						/>
+					</Button>
+				</div>
 			</div>
 		</div>
 	);
