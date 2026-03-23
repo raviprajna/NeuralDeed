@@ -237,6 +237,62 @@ def extract_citations(answer: str, document_text: str | None, document_name_to_i
     return unique_citations
 
 
+async def generate_starter_questions(document_text: str, document_names: list[str]) -> list[str]:
+    """Generate 4 contextual starter questions based on document content.
+
+    Args:
+        document_text: Combined text from all documents
+        document_names: List of document filenames
+
+    Returns:
+        list: 4 contextual starter questions
+    """
+    doc_list = ", ".join(document_names)
+    prompt = (
+        f"Based on these documents: {doc_list}\n\n"
+        f"Document content preview:\n{document_text[:2000]}\n\n"
+        "Generate exactly 4 concise, specific starter questions that would help analyze these documents. "
+        "Questions should be:\n"
+        "- Specific to the actual content and document type\n"
+        "- Actionable and valuable for real estate legal review\n"
+        "- Short (under 15 words each)\n"
+        "- Directly answerable from the documents\n\n"
+        "Format: Return ONLY the 4 questions, one per line, numbered 1-4."
+    )
+
+    try:
+        result = await agent.run(prompt)
+        questions_text = str(result.output).strip()
+
+        # Parse the questions
+        lines = [line.strip() for line in questions_text.split('\n') if line.strip()]
+        questions = []
+        for line in lines[:4]:  # Take only first 4
+            # Remove numbering like "1.", "1)", etc.
+            clean = line.lstrip('0123456789.)- ').strip()
+            if clean:
+                questions.append(clean)
+
+        # Fallback to generic if parsing fails
+        if len(questions) < 4:
+            return [
+                "What are the key terms and conditions?",
+                "Are there any concerning clauses?",
+                "Summarize the main obligations",
+                "What are the critical dates and deadlines?"
+            ]
+
+        return questions[:4]
+    except Exception:
+        # Return generic fallbacks on error
+        return [
+            "What are the key terms and conditions?",
+            "Are there any concerning clauses?",
+            "Summarize the main obligations",
+            "What are the critical dates and deadlines?"
+        ]
+
+
 async def verify_response(answer: str, document_text: str | None) -> tuple[int, str]:
     """Verify the AI answer against source documents and return confidence score.
 

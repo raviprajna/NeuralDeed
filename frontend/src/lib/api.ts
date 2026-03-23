@@ -155,3 +155,10 @@ export async function searchDocuments(
 	);
 	return handleResponse<SearchResult[]>(res);
 }
+
+export async function fetchStarterQuestions(
+	conversationId: string,
+): Promise<string[]> {
+	const res = await fetch(`${BASE}/conversations/${conversationId}/starter-questions`);
+	return handleResponse<string[]>(res);
+}

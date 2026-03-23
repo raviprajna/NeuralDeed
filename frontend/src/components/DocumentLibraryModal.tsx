@@ -1,11 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
 	Check,
-	FileText,
 	Folder,
 	Link2,
 	Loader2,
-	Plus,
 	Search,
 	Upload,
 	X,
@@ -108,6 +106,7 @@ export function DocumentLibraryModal({
 			// Upload files to library
 			for (let i = 0; i < fileArray.length; i++) {
 				const file = fileArray[i];
+				if (!file) continue;
 
 				setUploads((prev) =>
 					prev.map((u, idx) =>

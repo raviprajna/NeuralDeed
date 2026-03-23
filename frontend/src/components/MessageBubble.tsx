@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Bot, FileText } from "lucide-react";
 import { Streamdown } from "streamdown";
 import "streamdown/styles.css";
-import type { Citation, Message } from "../types";
+import type { Message } from "../types";
 import { InlineCitationText } from "./InlineCitationText";
 
 interface MessageBubbleProps {

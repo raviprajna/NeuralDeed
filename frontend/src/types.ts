@@ -36,5 +36,6 @@ export interface Document {
 }
 
 export interface ConversationDetail extends Conversation {
+	documents?: Document[];
 	document?: Document;
 }

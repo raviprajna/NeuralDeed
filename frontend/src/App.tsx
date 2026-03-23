@@ -35,9 +35,7 @@ export default function App() {
 	} = useMessages(selectedId);
 
 	const {
-		document,
 		documents,
-		upload,
 		refresh: refreshDocument,
 	} = useDocument(selectedId);
 
@@ -47,17 +45,6 @@ export default function App() {
 			refreshConversations();
 		},
 		[send, refreshConversations],
-	);
-
-	const handleUpload = useCallback(
-		async (file: File) => {
-			const doc = await upload(file);
-			if (doc) {
-				refreshDocument();
-				refreshConversations();
-			}
-		},
-		[upload, refreshDocument, refreshConversations],
 	);
 
 	const handleCreate = useCallback(async () => {
@@ -162,10 +149,8 @@ export default function App() {
 					streaming={streaming}
 					streamingContent={streamingContent}
 					hasDocument={documents.length > 0}
-					documentCount={documents.length}
 					conversationId={selectedId}
 					onSend={handleSend}
-					onUpload={handleUpload}
 					onCitationClick={handleCitationClick}
 					onOpenLibrary={handleOpenLibrary}
 				/>

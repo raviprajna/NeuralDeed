@@ -1,5 +1,6 @@
 import { FileText, Link2, Loader2, Upload } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import * as api from "../lib/api";
 import type { Message } from "../types";
 import { ChatInput } from "./ChatInput";
 import { MessageBubble, StreamingBubble } from "./MessageBubble";
@@ -11,10 +12,8 @@ interface ChatWindowProps {
 	streaming: boolean;
 	streamingContent: string;
 	hasDocument: boolean;
-	documentCount?: number;
 	conversationId: string | null;
 	onSend: (content: string) => void;
-	onUpload: (file: File) => void;
 	onCitationClick?: (page: number, documentId?: string, extractedText?: string) => void;
 	onOpenLibrary?: () => void;
 }
@@ -26,14 +25,38 @@ export function ChatWindow({
 	streaming,
 	streamingContent,
 	hasDocument,
-	documentCount = 0,
 	conversationId,
 	onSend,
-	onUpload,
 	onCitationClick,
 	onOpenLibrary,
 }: ChatWindowProps) {
 	const scrollRef = useRef<HTMLDivElement>(null);
+	const [starterQuestions, setStarterQuestions] = useState<string[]>([
+		"What properties are mentioned in these documents?",
+		"Summarize the key dates and deadlines",
+		"Are there any concerning clauses or red flags?",
+		"Compare the indemnity provisions"
+	]);
+	const [loadingQuestions, setLoadingQuestions] = useState(false);
+
+	// Load dynamic starter questions when documents are added
+	useEffect(() => {
+		if (conversationId && hasDocument && messages.length === 0 && !loadingQuestions) {
+			setLoadingQuestions(true);
+			api.fetchStarterQuestions(conversationId)
+				.then(questions => {
+					if (questions && questions.length > 0) {
+						setStarterQuestions(questions);
+					}
+				})
+				.catch(err => {
+					console.error('Failed to load starter questions:', err);
+				})
+				.finally(() => {
+					setLoadingQuestions(false);
+				});
+		}
+	}, [conversationId, hasDocument, messages.length, loadingQuestions]);
 
 	// Auto-scroll to bottom when new messages arrive or during streaming
 	const messagesLength = messages.length;
@@ -109,48 +132,36 @@ export function ChatWindow({
 
 					{hasDocument && (
 						<>
-							<p className="text-base font-semibold text-neutral-900">Ready to analyze your documents</p>
-							<p className="mt-2 text-sm text-neutral-600">Try these starter questions:</p>
+							<div className="flex items-center gap-3">
+								<p className="text-base font-semibold text-neutral-900">Ready to analyze your documents</p>
+								{loadingQuestions && <Loader2 className="h-4 w-4 animate-spin text-brand-500" />}
+							</div>
+							<p className="mt-2 text-sm text-neutral-600">Try these contextual questions:</p>
 
 							<div className="mt-6 grid grid-cols-2 gap-3 w-full max-w-2xl">
-								<button
-									type="button"
-									onClick={() => onSend("What properties are mentioned in these documents?")}
-									className="rounded-xl border border-neutral-200 bg-white p-4 text-left text-sm text-neutral-700 transition-all hover:border-brand-300 hover:bg-brand-50 hover:shadow-soft"
-								>
-									📍 What properties are mentioned in these documents?
-								</button>
-								<button
-									type="button"
-									onClick={() => onSend("Summarize the key dates and deadlines")}
-									className="rounded-xl border border-neutral-200 bg-white p-4 text-left text-sm text-neutral-700 transition-all hover:border-brand-300 hover:bg-brand-50 hover:shadow-soft"
-								>
-									📅 Summarize the key dates and deadlines
-								</button>
-								<button
-									type="button"
-									onClick={() => onSend("Are there any concerning clauses or red flags?")}
-									className="rounded-xl border border-neutral-200 bg-white p-4 text-left text-sm text-neutral-700 transition-all hover:border-brand-300 hover:bg-brand-50 hover:shadow-soft"
-								>
-									⚠️ Are there any concerning clauses or red flags?
-								</button>
-								<button
-									type="button"
-									onClick={() => onSend("Compare the indemnity provisions across documents")}
-									className="rounded-xl border border-neutral-200 bg-white p-4 text-left text-sm text-neutral-700 transition-all hover:border-brand-300 hover:bg-brand-50 hover:shadow-soft"
-								>
-									⚖️ Compare the indemnity provisions
-								</button>
+								{starterQuestions.map((question, idx) => (
+									<button
+										key={idx}
+										type="button"
+										onClick={() => onSend(question)}
+										className="rounded-xl border-2 border-neutral-200 bg-white p-4 text-left text-sm font-medium text-neutral-700 transition-all hover:border-brand-400 hover:bg-gradient-to-br hover:from-brand-50 hover:to-purple-50 hover:shadow-md active:scale-[0.98]"
+									>
+										<span className="text-brand-600 mr-2">
+											{["💡", "🔍", "⚠️", "📊"][idx]}
+										</span>
+										{question}
+									</button>
+								))}
 							</div>
 						</>
 					)}
 				</div>
 				<ChatInput
 					onSend={onSend}
-					onUpload={onUpload}
+					
 					disabled={streaming}
 					hasDocument={hasDocument}
-					allowMultipleDocuments={true}
+					
 				/>
 			</div>
 		);
@@ -175,10 +186,10 @@ export function ChatWindow({
 
 			<ChatInput
 				onSend={onSend}
-				onUpload={onUpload}
+				
 				disabled={streaming}
 				hasDocument={hasDocument}
-				allowMultipleDocuments={true}
+				
 				onOpenLibrary={onOpenLibrary}
 			/>
 		</div>

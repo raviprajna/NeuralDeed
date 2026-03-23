@@ -36,7 +36,7 @@ export function MultiDocViewer({
 	documents,
 	activeDocumentId,
 	onDocumentChange,
-	highlightPage,
+	// highlightPage,
 }: MultiDocViewerProps) {
 	const [width, setWidth] = useState(DEFAULT_WIDTH);
 	const [dragging, setDragging] = useState(false);

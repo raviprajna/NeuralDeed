@@ -5,24 +5,19 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 interface ChatInputProps {
 	onSend: (content: string) => void;
-	onUpload: (file: File) => void;
 	disabled: boolean;
 	hasDocument: boolean;
-	allowMultipleDocuments?: boolean;
 	onOpenLibrary?: () => void;
 }
 
 export function ChatInput({
 	onSend,
-	onUpload,
 	disabled,
 	hasDocument,
-	allowMultipleDocuments = true,
 	onOpenLibrary,
 }: ChatInputProps) {
 	const [value, setValue] = useState("");
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
-	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const handleSend = useCallback(() => {
 		const trimmed = value.trim();
@@ -52,19 +47,6 @@ export function ChatInput({
 		textarea.style.height = `${newHeight}px`;
 	}, []);
 
-	const handleFileChange = useCallback(
-		(e: React.ChangeEvent<HTMLInputElement>) => {
-			const file = e.target.files?.[0];
-			if (file) {
-				onUpload(file);
-			}
-			// Reset the input so the same file can be selected again
-			if (fileInputRef.current) {
-				fileInputRef.current.value = "";
-			}
-		},
-		[onUpload],
-	);
 
 	return (
 		<div className="border-t border-neutral-200 bg-white p-3">

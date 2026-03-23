@@ -65,6 +65,7 @@ export function DocumentManager({
 			// Upload files sequentially (could be parallel, but easier to track)
 			for (let i = 0; i < fileArray.length; i++) {
 				const file = fileArray[i];
+				if (!file) continue;
 				const uploadIndex = uploads.length + i;
 
 				setUploads((prev) =>

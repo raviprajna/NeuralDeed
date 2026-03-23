@@ -2,11 +2,8 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	FileText,
-	Link2,
 	Loader2,
-	Plus,
 	Search,
-	Upload,
 	X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -72,7 +69,7 @@ export function EnhancedMultiDocViewer({
 	const activeDoc = documents.find((d) => d.id === activeDocumentId) || documents[0];
 
 	useEffect(() => {
-		if (!activeDoc && documents.length > 0) {
+		if (!activeDoc && documents.length > 0 && documents[0]) {
 			onDocumentChange?.(documents[0].id);
 		}
 	}, [documents, activeDoc, onDocumentChange]);
@@ -244,6 +241,11 @@ export function EnhancedMultiDocViewer({
 
 			// Take the first result
 			const firstResult = results[0];
+			if (!firstResult) {
+				setSearching(false);
+				return;
+			}
+
 			const searchText = searchQuery.toLowerCase().trim();
 
 			// Switch to the document that has the match
@@ -383,10 +385,10 @@ export function EnhancedMultiDocViewer({
 
 			{/* Search Bar (Collapsible) */}
 			{showSearch && (
-				<div className="border-b border-neutral-100 bg-neutral-50 p-3">
-					<form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="flex items-center gap-2">
-						<div className="flex flex-1 items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2">
-							<Search className="h-4 w-4 text-neutral-400" />
+				<div className="border-b border-brand-200 bg-gradient-to-r from-white via-brand-50/20 to-purple-50/20 px-4 py-3">
+					<form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="flex items-center gap-3">
+						<div className="flex flex-1 items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-md hover:shadow-lg transition-all ring-1 ring-neutral-200 focus-within:ring-2 focus-within:ring-brand-400">
+							<Search className="h-5 w-5 text-brand-500" />
 							<input
 								ref={searchInputRef}
 								type="text"
@@ -407,11 +409,11 @@ export function EnhancedMultiDocViewer({
 									}
 								}}
 								placeholder="Search across all documents... (Ctrl+F)"
-								className="flex-1 bg-transparent text-sm outline-none placeholder:text-neutral-400"
+								className="flex-1 bg-transparent text-sm font-medium text-neutral-900 outline-none placeholder:text-neutral-500 placeholder:font-normal"
 								disabled={searching}
 							/>
 							{searchResultCount > 0 && (
-								<span className="text-xs text-neutral-600 font-medium mr-2">
+								<span className="text-xs font-semibold text-brand-700 bg-brand-100 px-2.5 py-1 rounded-full">
 									{searchResultCount} {searchResultCount === 1 ? 'result' : 'results'}
 								</span>
 							)}
@@ -419,10 +421,11 @@ export function EnhancedMultiDocViewer({
 								<button
 									type="button"
 									onClick={() => {
-										setSearchQuery("");
+										setSearchQuery('');
 										setSearchResultCount(0);
 									}}
-									className="text-neutral-400 hover:text-neutral-600"
+									className="text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded p-1 transition-colors"
+									title="Clear search"
 								>
 									<X className="h-4 w-4" />
 								</button>
@@ -435,14 +438,11 @@ export function EnhancedMultiDocViewer({
 							type="submit"
 							size="sm"
 							disabled={!searchQuery.trim() || searching}
-							className="h-9"
+							className="h-10 bg-gradient-to-br from-brand-500 to-brand-600 text-white hover:from-brand-600 hover:to-brand-700 shadow-md font-semibold px-6"
 						>
-							Search
+							{searching ? 'Searching...' : 'Search'}
 						</Button>
 					</form>
-					<p className="mt-2 text-xs text-neutral-500">
-						{searching ? 'Searching...' : `Search across all ${documents.length} document${documents.length !== 1 ? 's' : ''}`}
-					</p>
 				</div>
 			)}
 

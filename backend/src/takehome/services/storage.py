@@ -14,7 +14,8 @@ import structlog
 logger = structlog.get_logger()
 
 # Check if we're in production (Railway) or local development
-USE_R2 = os.environ.get("RAILWAY_ENVIRONMENT") is not None or os.environ.get("USE_R2") == "true"
+# For now, always use local storage (uploads folder) even in production
+USE_R2 = os.environ.get("USE_R2") == "true"  # Only use R2 if explicitly enabled
 
 if USE_R2:
     import boto3

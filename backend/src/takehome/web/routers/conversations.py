@@ -14,6 +14,8 @@ from takehome.services.conversation import (
     list_conversations,
     update_conversation,
 )
+from takehome.services.document import get_documents_for_conversation
+from takehome.services.llm import generate_starter_questions
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
@@ -201,3 +203,40 @@ async def delete_conversation_endpoint(
     deleted = await delete_conversation(session, conversation_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Conversation not found")
+
+
+@router.get("/{conversation_id}/starter-questions", response_model=list[str])
+async def get_starter_questions(
+    conversation_id: str,
+    session: AsyncSession = Depends(get_session),
+) -> list[str]:
+    """Generate contextual starter questions based on conversation documents."""
+    conversation = await get_conversation(session, conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Get documents for this conversation
+    documents = await get_documents_for_conversation(session, conversation_id)
+
+    if not documents:
+        # Return generic questions if no documents
+        return [
+            "What properties are mentioned in these documents?",
+            "Summarize the key dates and deadlines",
+            "Are there any concerning clauses or red flags?",
+            "Compare the indemnity provisions"
+        ]
+
+    # Combine document text
+    document_texts = []
+    document_names = []
+    for doc in documents:
+        if doc.extracted_text:
+            document_texts.append(f"=== {doc.filename} ===\n{doc.extracted_text[:1000]}")
+            document_names.append(doc.filename)
+
+    combined_text = "\n\n".join(document_texts)
+
+    # Generate questions
+    questions = await generate_starter_questions(combined_text, document_names)
+    return questions

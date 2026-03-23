@@ -28,7 +28,7 @@ export function ChatSidebar({
 	const [hoveredId, setHoveredId] = useState<string | null>(null);
 
 	return (
-		<div className="flex h-full w-[250px] flex-shrink-0 flex-col border-r border-neutral-200 bg-white">
+		<div className="flex h-full w-[250px] flex-shrink-0 flex-col border-r border-neutral-200 bg-gradient-to-b from-white to-neutral-50">
 			<div className="flex items-center justify-between border-b border-neutral-100 p-3">
 				<div className="flex items-center gap-2">
 					<div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-600 shadow-sm">
