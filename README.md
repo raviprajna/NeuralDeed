@@ -8,6 +8,10 @@ The app works, but it has limitations. Your job is to extend it.
 
 ---
 
+## Demo and Live App 
+* **Demo Video:** [Watch the Loom Walkthrough](https://www.loom.com/share/52fd64504b6242319da571ed1890fa58)
+* **Live App:** [Neuraldeed Production](https://neuraldeed-production.up.railway.app/)
+
 ## Setup
 
 ### Prerequisites
